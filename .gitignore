@@ -21,6 +21,7 @@ build/
 .env
 .env.local
 .env.*.local
+backend/**/.env
 
 # IDE
 .vscode/
@@ -44,23 +45,37 @@ yarn-error.log*
 
 # Docker
 .dockerignore
+docker-compose.override.yml
 
 # Testing
 coverage/
 .nyc_output/
 *.test.js.snap
+.pytest_cache/
+.coverage
+htmlcov/
 
 # OS
 .DS_Store
 Thumbs.db
 
 # Model files (if large, consider Git LFS)
-# *.onnx
-# *.onnx.data
+# Uncomment if you want to exclude model files
+# backend/services/mood-detection/models/*.onnx
+# backend/services/mood-detection/models/*.onnx.data
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 
+# Cursor
 .cursorrules*
+
+# Python
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
