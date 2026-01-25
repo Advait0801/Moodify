@@ -1,0 +1,19 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const config = {
+    env: process.env.NODE_ENV || 'development',
+    port: parseInt(process.env.PORT || '3001', 10),
+    host: process.env.HOST || '0.0.0.0',
+
+    database: {
+        url: process.env.DATABASE_URL || 'postgresql://moodify:moodify_dev@localhost:5432/moodify',
+    },
+
+    spotify: {
+        clientId: process.env.SPOTIFY_CLIENT_ID || '',
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+        redirectUri: process.env.SPOTIFY_REDIRECT_URI || '',
+    },
+};
