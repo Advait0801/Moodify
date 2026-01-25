@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import FormData from 'form-data';
 import { config } from '../config/config';
 import { logger } from '../utils/logger.util';
 
@@ -28,15 +29,17 @@ class MoodDetectionClient {
     async detectMood(imageBuffer: Buffer): Promise<MoodDetectionResponse> {
         try {
             const formData = new FormData();
-            const blob = new Blob([imageBuffer], { type: 'image/jpeg'});
-            formData.append('file', blob, 'image.jpg');
+            formData.append('file', imageBuffer, {
+                filename: 'image.jpg',
+                contentType: 'image/jpeg',
+            });
 
             const response = await this.client.post<MoodDetectionResponse>(
                 '/infer/mood',
                 formData,
                 {
                     headers: {
-                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
                     },
                 }
             );

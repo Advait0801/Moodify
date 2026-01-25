@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import type { StringValue } from 'ms';
 import { config } from '../config/config';
 
 export interface JWTPayload {
@@ -9,7 +10,7 @@ export interface JWTPayload {
 export const jwtUtil = {
   sign: (payload: JWTPayload): string => {
     return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn,
+      expiresIn: config.jwt.expiresIn as StringValue | number,
     });
   },
   
