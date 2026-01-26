@@ -5,17 +5,29 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev for TypeScript build)
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript and verify output exists
+RUN echo "Building TypeScript..." && \
+    npm run build && \
+    echo "Build completed. Checking output..." && \
+    ls -la . && \
+    ls -la dist/ && \
+    test -f dist/app.js || (echo "ERROR: dist/app.js not found after build" && exit 1) && \
+    echo "Build verification passed"
+
+# Remove dev dependencies to reduce image size (preserve dist)
+RUN npm prune --production && \
+    echo "After prune, checking dist..." && \
+    ls -la dist/ && \
+    test -f dist/app.js || (echo "ERROR: dist/app.js removed after prune" && exit 1)
 
 # Expose port
 EXPOSE 3000
 
 # Start server
-CMD ["npm", "start"]
+CMD ["node", "dist/app.js"]

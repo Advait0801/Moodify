@@ -1,7 +1,41 @@
 name: moodify
 
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: moodify-postgres
+    environment:
+      POSTGRES_USER: moodify
+      POSTGRES_PASSWORD: moodify_dev
+      POSTGRES_DB: moodify
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moodify"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: moodify-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mood Detection Service (FastAPI)
   mood-detection:
+    image: moodify-mood-detection:latest
     build:
       context: ./services/mood-detection
       dockerfile: Dockerfile
@@ -19,3 +53,79 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # API Gateway (Node.js)
+  api-gateway:
+    image: moodify-api-gateway:latest
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: moodify-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://moodify:moodify_dev@postgres:5432/moodify
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
+      - MOOD_DETECTION_SERVICE_URL=http://mood-detection:8001
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-engine:3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mood-detection:
+        condition: service_healthy
+    volumes:
+      - ./services/api-gateway:/app
+      - /app/node_modules
+      - /app/dist
+
+  # Recommendation Engine (Node.js)
+  recommendation-engine:
+    image: moodify-recommendation-engine:latest
+    build:
+      context: ./services/recommendation-engine
+      dockerfile: Dockerfile
+    container_name: moodify-recommendation-engine
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://moodify:moodify_dev@postgres:5432/moodify
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/recommendation-engine:/app
+      - /app/node_modules
+      - /app/dist
+
+  # Analytics Worker (Node.js)
+  analytics-worker:
+    image: moodify-analytics-worker:latest
+    build:
+      context: ./services/analytics-worker
+      dockerfile: Dockerfile
+    container_name: moodify-analytics-worker
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://moodify:moodify_dev@postgres:5432/moodify
+      - REDIS_URL=redis://redis:6379
+      - REDIS_QUEUE_NAME=mood_history_queue
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/analytics-worker:/app
+      - /app/node_modules
+      - /app/dist
+
+volumes:
+  postgres_data:
+  redis_data:
