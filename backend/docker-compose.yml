@@ -77,8 +77,8 @@ services:
         condition: service_healthy
     volumes:
       - ./services/api-gateway:/app
-      - /app/node_modules
-      - /app/dist
+      - api_gateway_node_modules:/app/node_modules
+      - api_gateway_dist:/app/dist
 
   # Recommendation Engine (Node.js)
   recommendation-engine:
@@ -89,20 +89,19 @@ services:
     container_name: moodify-recommendation-engine
     ports:
       - "3001:3001"
+    env_file:
+      - ./services/recommendation-engine/.env
     environment:
       - NODE_ENV=development
       - PORT=3001
       - DATABASE_URL=postgresql://moodify:moodify_dev@postgres:5432/moodify
-      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
-      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./services/recommendation-engine:/app
-      - /app/node_modules
-      - /app/dist
+      - recommendation_engine_node_modules:/app/node_modules
+      - recommendation_engine_dist:/app/dist
 
   # Analytics Worker (Node.js)
   analytics-worker:
@@ -123,9 +122,15 @@ services:
         condition: service_healthy
     volumes:
       - ./services/analytics-worker:/app
-      - /app/node_modules
-      - /app/dist
+      - analytics_worker_node_modules:/app/node_modules
+      - analytics_worker_dist:/app/dist
 
 volumes:
   postgres_data:
   redis_data:
+  api_gateway_node_modules:
+  api_gateway_dist:
+  recommendation_engine_node_modules:
+  recommendation_engine_dist:
+  analytics_worker_node_modules:
+  analytics_worker_dist:

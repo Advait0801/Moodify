@@ -1,6 +1,7 @@
 import { spotifyClient } from "../clients/spotify.client";
 import { emotionMapperService } from "./emotion-mapper.service";
 import { recommendationRepository } from "../repositories/recommendation.repository";
+import { fallbackProviderService } from "./fallback-provider.service";
 import { logger } from "../utils/logger.util";
 
 export interface RecommendationRequest {
@@ -18,19 +19,20 @@ export interface RecommendationResponse {
         preview_url?: string;
     }>;
     emotion: string;
+    source?: 'spotify' | 'fallback';
 }
 
 export const recommendationService = {
     async getRecommendations(
         request: RecommendationRequest
     ): Promise<RecommendationResponse> {
-        try {
-            const mapping = emotionMapperService.getMapping(request.emotion);
-            logger.info(
-                `Getting recommendations for emotion: ${request.emotion} ` + 
-                `(confidence: ${request.confidence})`
-            );
+        const mapping = emotionMapperService.getMapping(request.emotion);
+        logger.info(
+            `Getting recommendations for emotion: ${request.emotion} ` +
+            `(confidence: ${request.confidence})`
+        );
 
+        try {
             const spotifyTracks = await spotifyClient.getRecommendations(
                 mapping.genres,
                 mapping.energy,
@@ -54,13 +56,46 @@ export const recommendationService = {
                 trackIds
             );
 
+            logger.info('Successfully retrieved recommendations from Spotify');
             return {
                 tracks,
                 emotion: request.emotion,
+                source: 'spotify',
             };
         } catch (error: any) {
-            logger.error('Recommendation service error:', error.message);
-            throw error;
+            logger.warn(`Spotify failed: ${error.message}`);
+
+            try {
+                const fallBackTracks = fallbackProviderService.getRecommendations(
+                    request.emotion,
+                    20
+                );
+
+                const tracks = fallBackTracks.map((track) => ({
+                    id: track.id,
+                    name: track.name,
+                    artist: track.artists[0]?.name || 'Unknown',
+                    preview_url: track.preview_url || undefined,
+                }));
+
+                const trackIds = tracks.map((t) => t.id);
+
+                await recommendationRepository.create(
+                    request.userId,
+                    request.emotion,
+                    trackIds
+                );
+
+                logger.info('Successfully retrieved recommendations from fallback provider');
+                return {
+                    tracks,
+                    emotion: request.emotion,
+                    source: 'fallback'
+                };
+            } catch (fallBackError: any) {
+                logger.error('Both Spotify and fallback provider failed:', fallBackError.message);
+                throw new Error('Failed to get recommendations from any provider');
+            }
         }
     }
-}
+};
