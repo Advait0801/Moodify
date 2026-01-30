@@ -2,6 +2,7 @@ import { spotifyClient } from "../clients/spotify.client";
 import { emotionMapperService, EmotionMapping } from "./emotion-mapper.service";
 import { recommendationRepository } from "../repositories/recommendation.repository";
 import { fallbackProviderService } from "./fallback-provider.service";
+import { explanationService } from "./explanation.service";
 import { logger } from "../utils/logger.util";
 import { config } from "../config/config";
 
@@ -22,6 +23,7 @@ export interface RecommendationResponse {
     }>;
     emotion: string;
     source?: 'spotify' | 'fallback';
+    explanation?: string;
 }
 
 function getPrimaryEmotion(request: RecommendationRequest): string {
@@ -89,11 +91,22 @@ export const recommendationService = {
                 trackIds
             );
 
+            let explanation: string | null = null;
+            try {
+                explanation = await explanationService.getExplanation({
+                    primaryEmotion,
+                    valence: mapping.valence,
+                    energy: mapping.energy,
+                    tracks: tracks.map((t) => ({ name: t.name, artist: t.artist})),
+                });
+            } catch {}
+
             logger.info('Successfully retrieved recommendations from Spotify');
             return {
                 tracks,
                 emotion: primaryEmotion,
                 source: 'spotify',
+                ...(explanation && { explanation }),
             };
         } catch (error: any) {
             logger.warn(`Spotify failed: ${error.message}`);
@@ -119,11 +132,22 @@ export const recommendationService = {
                     trackIds
                 );
 
+                let explanation: string | null = null;
+                try {
+                    explanation = await explanationService.getExplanation({
+                        primaryEmotion,
+                        valence: mapping.valence,
+                        energy: mapping.energy,
+                        tracks: tracks.map((t) => ({ name: t.name, artist: t.artist})),
+                    });
+                } catch {}
+
                 logger.info('Successfully retrieved recommendations from fallback provider');
                 return {
                     tracks,
                     emotion: primaryEmotion,
-                    source: 'fallback'
+                    source: 'fallback',
+                    ...(explanation && { explanation }),
                 };
             } catch (fallBackError: any) {
                 logger.error('Both Spotify and fallback provider failed:', fallBackError.message);

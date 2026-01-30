@@ -26,6 +26,6 @@ export const config = {
     },
     
     moodSmoothing: {
-        windowSize: parseInt(process.env.MOOD_SMOOTHING_WINDOW_SIZE || '3', 10), // last N moods
+        windowSize: parseInt(process.env.MOOD_SMOOTHING_WINDOW_SIZE || '3', 10),
     },
 };

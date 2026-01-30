@@ -68,6 +68,7 @@ export const orchestrationService = {
                 recommendations: {
                     tracks: recommendations.tracks,
                     playlist_id: recommendations.playlist_id,
+                    ...(recommendations.explanation && { explanation: recommendations.explanation }),
                 },
             };
         } catch (error: any) {

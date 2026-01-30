@@ -18,6 +18,7 @@ export interface RecommendationResponse {
         preview_url?: string;
     }>;
     emotion: string;
+    explanation?: string;
 }
 
 class RecommendationClient {

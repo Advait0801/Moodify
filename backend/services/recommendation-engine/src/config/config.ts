@@ -18,4 +18,11 @@ export const config = {
     },
 
     confidenceThreshold: parseFloat(process.env.CONFIDENCE_THRESHOLD || '0.4'),
+
+    openai: {
+        apiKey: process.env.OPENAI_API_KEY || '',
+        model: process.env.OPENAI_EXPLANATION_MODEL || 'gpt-4o-mini',
+        enabled: process.env.OPENAI_EXPLANATION_ENABLED !== 'false', // default true
+        timeoutMs: parseInt(process.env.OPENAI_EXPLANATION_TIMEOUT_MS || '5000', 10),
+    },
 };
