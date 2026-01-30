@@ -1,8 +1,9 @@
 import { spotifyClient } from "../clients/spotify.client";
-import { emotionMapperService } from "./emotion-mapper.service";
+import { emotionMapperService, EmotionMapping } from "./emotion-mapper.service";
 import { recommendationRepository } from "../repositories/recommendation.repository";
 import { fallbackProviderService } from "./fallback-provider.service";
 import { logger } from "../utils/logger.util";
+import { config } from "../config/config";
 
 export interface RecommendationRequest {
     emotion: string;
@@ -36,21 +37,34 @@ export const recommendationService = {
     async getRecommendations(
         request: RecommendationRequest
     ): Promise<RecommendationResponse> {
-        const useBlending = request.emotionProbabilities && Object.keys(request.emotionProbabilities).length > 0;
+        const useNeutralFallback = request.confidence < config.confidenceThreshold;
 
-        const mapping = useBlending
-            ? emotionMapperService.blendFromProbabilities(request.emotionProbabilities!)
-            : emotionMapperService.getMapping(request.emotion);
+        let mapping: EmotionMapping;
+        let primaryEmotion: string;
 
-        const primaryEmotion = getPrimaryEmotion(request);
-        logger.info(
-            `Getting recommendations for emotion: ${primaryEmotion} ` + 
-            (useBlending
-                ? `(blended from ${Object.keys(request.emotionProbabilities!).length} emotions)`
-                : `(confidence: ${request.confidence})`
+        if(useNeutralFallback) {
+            mapping = emotionMapperService.getMapping('neutral');
+            primaryEmotion = 'neutral';
+            logger.info(
+                `Low confidence (${request.confidence.toFixed(2)} < ${config.confidenceThreshold}); using neutral recommendations`
+            );
+        } else {
+            const useBlending = request.emotionProbabilities && Object.keys(request.emotionProbabilities).length > 0;
+
+            mapping = useBlending
+                ? emotionMapperService.blendFromProbabilities(request.emotionProbabilities!)
+                : emotionMapperService.getMapping(request.emotion);
+
+            primaryEmotion = getPrimaryEmotion(request);
+            logger.info(
+                `Getting recommendations for emotion: ${primaryEmotion} ` + 
+                (useBlending
+                    ? `(blended from ${Object.keys(request.emotionProbabilities!).length} emotions)`
+                    : `(confidence: ${request.confidence})`
+                )
             )
-        );
-
+        }
+        
         try {
             const spotifyTracks = await spotifyClient.getRecommendations(
                 mapping.genres,

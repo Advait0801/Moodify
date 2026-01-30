@@ -16,4 +16,6 @@ export const config = {
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
         redirectUri: process.env.SPOTIFY_REDIRECT_URI || '',
     },
+
+    confidenceThreshold: parseFloat(process.env.CONFIDENCE_THRESHOLD || '0.4'),
 };
