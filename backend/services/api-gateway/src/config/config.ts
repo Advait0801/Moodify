@@ -20,4 +20,12 @@ export const config = {
         moodDetection: process.env.MOOD_DETECTION_SERVICE_URL || 'http://localhost:8001',
         recommendation: process.env.RECOMMENDATION_SERVICE_URL || 'http://localhost:3001',
     },
+
+    redis: {
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+    },
+    
+    moodSmoothing: {
+        windowSize: parseInt(process.env.MOOD_SMOOTHING_WINDOW_SIZE || '3', 10), // last N moods
+    },
 };
