@@ -6,6 +6,7 @@ export interface RecommendationRequest {
     emotion: string;
     confidence: number;
     userId: string;
+    emotionProbabilities?: Record<string, number>;
 }
 
 export interface RecommendationResponse {

@@ -8,6 +8,7 @@ export interface RecommendationRequest {
     emotion: string;
     confidence: number;
     userId: string;
+    emotionProbabilities?: Record<string, number>;
 }
 
 export interface RecommendationResponse {
@@ -22,14 +23,32 @@ export interface RecommendationResponse {
     source?: 'spotify' | 'fallback';
 }
 
+function getPrimaryEmotion(request: RecommendationRequest): string {
+    const probs = request.emotionProbabilities;
+    if(probs && Object.keys(probs).length > 0) {
+        const primary = Object.entries(probs).sort((a, b) => b[1] - a[1])[0]?.[0];
+        return primary ?? request.emotion;
+    }
+    return request.emotion;
+}
+
 export const recommendationService = {
     async getRecommendations(
         request: RecommendationRequest
     ): Promise<RecommendationResponse> {
-        const mapping = emotionMapperService.getMapping(request.emotion);
+        const useBlending = request.emotionProbabilities && Object.keys(request.emotionProbabilities).length > 0;
+
+        const mapping = useBlending
+            ? emotionMapperService.blendFromProbabilities(request.emotionProbabilities!)
+            : emotionMapperService.getMapping(request.emotion);
+
+        const primaryEmotion = getPrimaryEmotion(request);
         logger.info(
-            `Getting recommendations for emotion: ${request.emotion} ` +
-            `(confidence: ${request.confidence})`
+            `Getting recommendations for emotion: ${primaryEmotion} ` + 
+            (useBlending
+                ? `(blended from ${Object.keys(request.emotionProbabilities!).length} emotions)`
+                : `(confidence: ${request.confidence})`
+            )
         );
 
         try {
@@ -59,7 +78,7 @@ export const recommendationService = {
             logger.info('Successfully retrieved recommendations from Spotify');
             return {
                 tracks,
-                emotion: request.emotion,
+                emotion: primaryEmotion,
                 source: 'spotify',
             };
         } catch (error: any) {
@@ -67,7 +86,7 @@ export const recommendationService = {
 
             try {
                 const fallBackTracks = fallbackProviderService.getRecommendations(
-                    request.emotion,
+                    primaryEmotion,
                     20
                 );
 
@@ -82,14 +101,14 @@ export const recommendationService = {
 
                 await recommendationRepository.create(
                     request.userId,
-                    request.emotion,
+                    primaryEmotion,
                     trackIds
                 );
 
                 logger.info('Successfully retrieved recommendations from fallback provider');
                 return {
                     tracks,
-                    emotion: request.emotion,
+                    emotion: primaryEmotion,
                     source: 'fallback'
                 };
             } catch (fallBackError: any) {

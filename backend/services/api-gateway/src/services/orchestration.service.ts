@@ -28,7 +28,7 @@ export interface AnalyzeMoodResponse {
 export const orchestrationService = {
     async analyzeMoodAndRecommend(request: AnalyzeMoodRequest): Promise<AnalyzeMoodResponse> {
         try {
-            logger.info(`Analyzinf mood for user: ${request.userId}`);
+            logger.info(`Analyzing mood for user: ${request.userId}`);
             const moodResult = await moodDetectionClient.detectMood(request.imageBuffer);
 
             logger.info(`Getting recommendations for emotion: ${moodResult.predicted_emotion}`);
@@ -36,6 +36,7 @@ export const orchestrationService = {
                 emotion: moodResult.predicted_emotion,
                 confidence: moodResult.confidence,
                 userId: request.userId,
+                emotionProbabilities: moodResult.emotion_probabilities,
             });
 
             return {
