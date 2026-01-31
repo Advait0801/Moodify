@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { config } from "./config/config";
 import { recommendationsRoutes } from "./routes/recommendations.routes";
+import { textEmotionRoutes } from "./routes/text-emotion.routes";
 import { logger } from "./utils/logger.util";
 
 const app = Fastify({
@@ -13,6 +14,7 @@ app.register(cors, {
 });
 
 app.register(recommendationsRoutes);
+app.register(textEmotionRoutes);
 
 app.get('/health', async () => {
     return { status: 'healthy', service: 'recommendation-engine' };

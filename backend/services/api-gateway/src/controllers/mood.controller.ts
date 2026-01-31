@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { orchestrationService } from "../services/orchestration.service";
+import { recommendationClient } from "../clients/recommendation.client";
 import { logger } from "../utils/logger.util";
 
 export const moodController = {
@@ -28,4 +29,21 @@ export const moodController = {
             throw error;
         }
     },
+
+    async analyzeMoodFromText(
+        request: FastifyRequest<{ Body: { text: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const authUser = (request as AuthenticatedRequest).user;
+            const userId = authUser?.userId ?? 'anonymous';
+            const text = request.body?.text ?? '';
+            const moodResult = await recommendationClient.getEmotionFromText(text);
+            const result = await orchestrationService.analyzeAndRecommendForMood(userId, moodResult);
+            return reply.status(200).send(result);
+        } catch (error: any) {
+            logger.error('Analyze mood from text error:', error.message);
+            return reply.status(500).send({ error: 'Text mood analysis failed' });
+        }
+    }
 };

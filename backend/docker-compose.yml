@@ -70,11 +70,17 @@ services:
       - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
       - MOOD_DETECTION_SERVICE_URL=http://mood-detection:8001
       - RECOMMENDATION_SERVICE_URL=http://recommendation-engine:3001
+      - REDIS_URL=redis://redis:6379
+      - MOOD_SMOOTHING_WINDOW_SIZE=${MOOD_SMOOTHING_WINDOW_SIZE:-3}
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       mood-detection:
         condition: service_healthy
+      recommendation-engine:
+        condition: service_started
     volumes:
       - ./services/api-gateway:/app
       - api_gateway_node_modules:/app/node_modules

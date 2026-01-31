@@ -44,6 +44,24 @@ class RecommendationClient {
             throw new Error(`Recommendation failed: ${error.message}`);
         }
     }
+
+    async getEmotionFromText(text: string): Promise<{
+        predicted_emotion: string;
+        confidence: number;
+        emotion_probabilities: Record<string, number>;
+    }> {
+        try {
+            const response = await this.client.post(
+                '/emotions/from-text',
+                { text }
+            );
+
+            return response.data;
+        } catch (error: any) {
+            logger.error('Recommendation client getEmotionFromText error:', error.message);
+            throw new Error('Text emotion analysis failed');
+        }
+    }
 }
 
 export const recommendationClient = new RecommendationClient();

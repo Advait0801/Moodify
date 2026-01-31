@@ -87,7 +87,7 @@ export const recommendationService = {
 
             await recommendationRepository.create(
                 request.userId,
-                request.emotion,
+                primaryEmotion,
                 trackIds
             );
 
