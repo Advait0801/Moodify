@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProviderWrapper } from "@/components/auth-provider";
 
 export const metadata: Metadata = {
   title: "Moodify",
-  description: "Mood-based music recommendation platform",
+  description: "Mood-based music recommendations",
 };
 
 export default function RootLayout({
@@ -13,8 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen">
-        {children}
+      <body className="antialiased min-h-screen bg-background text-foreground">
+        <AuthProviderWrapper>{children}</AuthProviderWrapper>
       </body>
     </html>
   );

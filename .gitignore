@@ -92,4 +92,19 @@ dmypy.json
 *.tsbuildinfo
 .tsbuildinfo
 
+# Next.js / Web
+.next/
+out/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.vercel
+next-env.d.ts
+*.pem
+.pnpm-debug.log*
+
 # Note: package-lock.json, yarn.lock should be committed for reproducible builds

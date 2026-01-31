@@ -6,13 +6,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b shrink-0">
+    <div className="min-h-screen flex flex-col bg-background">
+      <header className="border-b border-border bg-surface shrink-0">
         <nav className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 sm:py-4">
-          <Link href="/dashboard" className="font-semibold text-base sm:text-lg">
+          <Link href="/dashboard" className="font-semibold text-base sm:text-lg text-foreground">
             Moodify
           </Link>
-          <Link href="/profile" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link href="/profile" className="text-sm text-muted hover:text-foreground transition-opacity">
             Profile
           </Link>
         </nav>
