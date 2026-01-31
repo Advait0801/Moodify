@@ -68,7 +68,7 @@ async function analyzeAndRecommendForMood(
             face_detected: moodResult.face_detected ?? false,
         },
         recommendations: {
-            tracks: recommendations.tracks,
+            tracks: recommendations.tracks ?? [],
             playlist_id: recommendations.playlist_id,
             ...(recommendations.explanation && { explanation: recommendations.explanation }),
         },

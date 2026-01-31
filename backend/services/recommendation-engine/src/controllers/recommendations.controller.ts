@@ -12,6 +12,7 @@ export const recommendationController = {
             return reply.status(200).send(result);
         } catch (error: any) {
             logger.error('Recommendations controller error:', error.message);
+            return reply.status(500).send({ error: 'Failed to get recommendations', message: error.message });
         }
     },
 };

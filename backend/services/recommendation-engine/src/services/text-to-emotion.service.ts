@@ -48,7 +48,7 @@ export const textToEmotionService = {
         }
 
         if(!config.openai.apiKey || !config.openai.enabled) {
-            logger.warn('OpenAI not configured; returning neutral for text input');
+            logger.warn(`OpenAI not configured (apiKey: ${config.openai.apiKey ? 'set' : 'missing'}, enabled: ${config.openai.enabled}); returning neutral for text input`);
             return {
                 predicted_emotion: 'neutral',
                 confidence: 0.5,

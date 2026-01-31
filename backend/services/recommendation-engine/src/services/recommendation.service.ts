@@ -85,11 +85,13 @@ export const recommendationService = {
 
             const trackIds = tracks.map((t) => t.id);
 
-            await recommendationRepository.create(
-                request.userId,
-                primaryEmotion,
-                trackIds
-            );
+            if (request.userId !== 'anonymous') {
+                await recommendationRepository.create(
+                    request.userId,
+                    primaryEmotion,
+                    trackIds
+                );
+            }
 
             let explanation: string | null = null;
             try {
@@ -126,11 +128,13 @@ export const recommendationService = {
 
                 const trackIds = tracks.map((t) => t.id);
 
-                await recommendationRepository.create(
-                    request.userId,
-                    primaryEmotion,
-                    trackIds
-                );
+                if (request.userId !== 'anonymous') {
+                    await recommendationRepository.create(
+                        request.userId,
+                        primaryEmotion,
+                        trackIds
+                    );
+                }
 
                 let explanation: string | null = null;
                 try {

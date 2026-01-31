@@ -1,5 +1,6 @@
 import { openAIClient } from "../clients/openai.client";
 import { config } from "../config/config";
+import { logger } from "../utils/logger.util";
 
 export interface ExplanationInput {
     primaryEmotion: string;
@@ -10,7 +11,10 @@ export interface ExplanationInput {
 
 export const explanationService = {
     async getExplanation(input: ExplanationInput): Promise<string | null> {
-        if(!config.openai.apiKey || !config.openai.enabled) return null;
+        if(!config.openai.apiKey || !config.openai.enabled) {
+            logger.warn('Explanation skipped: OpenAI not configured or disabled');
+            return null;
+        }
 
         const trackList = input.tracks
             .slice(0, 10)

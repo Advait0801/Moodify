@@ -22,7 +22,7 @@ export const config = {
     openai: {
         apiKey: process.env.OPENAI_API_KEY || '',
         model: process.env.OPENAI_EXPLANATION_MODEL || 'gpt-4o-mini',
-        enabled: process.env.OPENAI_EXPLANATION_ENABLED !== 'false', // default true
+        enabled: process.env.OPENAI_EXPLANATION_ENABLED !== 'false',
         timeoutMs: parseInt(process.env.OPENAI_EXPLANATION_TIMEOUT_MS || '5000', 10),
     },
 };
