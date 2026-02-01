@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { MoodAnalyzeResponse } from "@/lib/types";
 
@@ -15,7 +16,6 @@ export default function AnalyzePage() {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -33,9 +33,8 @@ export default function AnalyzePage() {
     const dropped = e.dataTransfer.files?.[0];
     if(dropped?.type.startsWith("image/")) {
       setFile(dropped);
-      setError("");
     } else {
-      setError("Please upload an image file (JPEG, PNG, etc.).");
+      toast.error("Please upload an image file (JPEG, PNG, etc.).");
     }
   }
 
@@ -43,9 +42,8 @@ export default function AnalyzePage() {
     const selected = e.target.files?.[0];
     if(selected?.type.startsWith("image/")) {
       setFile(selected);
-      setError("");
     } else if (selected) {
-      setError("Please select an image file (JPEG, PNG, etc.).");
+      toast.error("Please select an image file (JPEG, PNG, etc.).");
     }
   }
 
@@ -56,14 +54,13 @@ export default function AnalyzePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
       let result: MoodAnalyzeResponse;
       if(mode === "photo") {
         if(!file) {
-          setError("Please upload an image.");
+          toast.error("Please upload an image.");
           setIsLoading(false);
           return;
         }
@@ -71,7 +68,7 @@ export default function AnalyzePage() {
       } else {
         const trimmed = text.trim();
         if(!trimmed) {
-          setError("Please describe how you feel.");
+          toast.error("Please describe how you feel.");
           setIsLoading(false);
           return;
         }
@@ -80,9 +77,10 @@ export default function AnalyzePage() {
       if(typeof window !== "undefined") {
         sessionStorage.setItem(RESULT_KEY, JSON.stringify(result));
       }
+      toast.success("Here are your recommendations!");
       router.push("/results");
     } catch (err: unknown) {
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Analysis failed. Please try again."
       );
     } finally {
@@ -111,7 +109,6 @@ export default function AnalyzePage() {
           onClick={() => {
             setMode("photo");
             setFile(null);
-            setError("");
           }}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-opacity ${
             mode === "photo"
@@ -126,7 +123,6 @@ export default function AnalyzePage() {
           onClick={() => {
             setMode("text");
             setText("");
-            setError("");
           }}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-opacity ${
             mode === "text"
@@ -198,12 +194,6 @@ export default function AnalyzePage() {
               disabled={isLoading}
             />
           </div>
-        )}
-
-        {error && (
-          <p className="text-sm text-red-400" role="alert">
-            {error}
-          </p>
         )}
 
         <button

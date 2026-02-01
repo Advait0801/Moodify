@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   getToken,
   getUser,
@@ -91,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearAuth();
     setUserState(null);
+    toast.success("Logged out successfully.");
     router.push("/");
   }, [router]);
 

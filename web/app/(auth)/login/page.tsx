@@ -2,27 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     if (!email.trim() || !password) {
-      setError("Email and password are required.");
+      toast.error("Email and password are required.");
       return;
     }
     setIsLoading(true);
     try {
       await login({ email: email.trim(), password });
+      toast.success("Welcome back!");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -51,22 +52,15 @@ export default function LoginPage() {
           <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
             autoComplete="current-password"
             disabled={isLoading}
           />
         </div>
-        {error && (
-          <p className="text-sm sm:text-base font-normal text-red-400" role="alert">
-            {error}
-          </p>
-        )}
         <button
           type="submit"
           disabled={isLoading}

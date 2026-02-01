@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-4 sm:gap-6 md:gap-8 p-4 sm:p-6 md:p-8 bg-background">
+    <main className="min-h-screen flex flex-col items-center justify-center gap-4 sm:gap-6 md:gap-8 p-4 sm:p-6 md:p-8 bg-background relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <h1 className="text-[2rem] sm:text-[2.25rem] md:text-[2.5rem] font-bold text-center text-foreground">
         Moodify
       </h1>

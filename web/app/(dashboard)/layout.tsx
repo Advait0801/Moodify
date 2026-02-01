@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useAuth } from "@/contexts/auth-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({
   children,
@@ -30,7 +31,8 @@ export default function DashboardLayout({
           >
             Moodify
           </Link>
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             <Link
               href="/profile"
               className="text-sm sm:text-base font-normal text-muted hover:text-foreground transition-colors"

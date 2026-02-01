@@ -2,36 +2,37 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     if (!email.trim() || !password) {
-      setError("Email and password are required.");
+      toast.error("Email and password are required.");
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      toast.error("Password must be at least 6 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
     setIsLoading(true);
     try {
       await register({ email: email.trim(), password });
+      toast.success("Account created! Welcome to Moodify.");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -60,13 +61,11 @@ export default function RegisterPage() {
           <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
             autoComplete="new-password"
             disabled={isLoading}
           />
@@ -75,22 +74,15 @@ export default function RegisterPage() {
           <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
             autoComplete="new-password"
             disabled={isLoading}
           />
         </div>
-        {error && (
-          <p className="text-sm sm:text-base font-normal text-red-400" role="alert">
-            {error}
-          </p>
-        )}
         <button
           type="submit"
           disabled={isLoading}
