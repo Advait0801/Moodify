@@ -68,8 +68,22 @@ export const api = {
     });
   },
 
-  async getProfile(): Promise<{ id: string; email: string }> {
+  async getProfile(): Promise<{ id: string; email: string; username?: string | null; profilePicture?: string | null }> {
     return request("/users/me");
+  },
+
+  async updateProfile(data: { profilePicture?: string | null }): Promise<{ id: string; email: string; username?: string | null; profilePicture?: string | null }> {
+    return request("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return request("/users/me/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   },
 
   async analyzeMood(image: File): Promise<MoodAnalyzeResponse> {

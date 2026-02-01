@@ -79,6 +79,7 @@ export default function AnalyzePage() {
       }
       if(typeof window !== "undefined") {
         sessionStorage.setItem(RESULT_KEY, JSON.stringify(result));
+        sessionStorage.setItem("moodify_result_input_type", mode);
       }
       toast.success("Here are your recommendations!");
       router.push("/results");
@@ -92,7 +93,7 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div className="max-w-2xl w-full">
+    <div className="w-full">
       <Link
         href="/dashboard"
         className="inline-block text-sm text-secondary hover:opacity-80 transition-opacity mb-4 sm:mb-6"

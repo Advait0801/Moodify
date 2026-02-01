@@ -16,7 +16,7 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export function getUser(): { id: string; email: string } | null {
+export function getUser(): { id: string; email: string; username?: string | null; profilePicture?: string | null } | null {
   if(typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -26,7 +26,7 @@ export function getUser(): { id: string; email: string } | null {
   }
 }
 
-export function setUser(user: { id: string; email: string }): void {
+export function setUser(user: { id: string; email: string; username?: string | null; profilePicture?: string | null }): void {
   if(typeof window === "undefined") return;
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }

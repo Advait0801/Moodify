@@ -7,6 +7,7 @@ import type { MoodAnalyzeResponse } from "@/lib/types";
 import { NowPlayingBar } from "@/components/now-playing-bar";
 
 const RESULT_KEY = "moodify_analyze_result";
+const HISTORY_KEY = "moodify_history";
 
 function isSpotifyTrack(id: string) {
   return !id.startsWith("fallback-") && id.length === 22;
@@ -60,6 +61,21 @@ export default function ResultsPage() {
         const parsed = JSON.parse(raw) as unknown;
         if(isValidResult(parsed)) {
           setResult(parsed);
+          const inputType = sessionStorage.getItem("moodify_result_input_type") as "photo" | "text" | null;
+          try {
+            const existing = localStorage.getItem(HISTORY_KEY);
+            const list = existing ? (JSON.parse(existing) as Array<{ emotion: string; date: string; inputType: string }>) : [];
+            const r = parsed as MoodAnalyzeResponse;
+            list.push({
+              emotion: r.emotion.predicted,
+              date: new Date().toISOString(),
+              inputType: inputType === "photo" || inputType === "text" ? inputType : "photo",
+            });
+            if (list.length > 50) list.splice(0, list.length - 50);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+          } catch {
+            //
+          }
         } else {
           setError("Invalid or incomplete results. Please try again.");
         }
@@ -82,7 +98,7 @@ export default function ResultsPage() {
 
   if (error) {
     return (
-      <div className="max-w-2xl w-full">
+      <div className="w-full">
         <div className="p-4 sm:p-6 rounded-lg bg-surface border border-border border-red-500/50">
           <p className="text-sm sm:text-base font-normal text-red-400" role="alert">
             {error}
@@ -110,7 +126,7 @@ export default function ResultsPage() {
   const confidencePercent = Math.round(emotion.confidence * 100);
 
   return (
-    <div className="max-w-2xl w-full pb-24 sm:pb-28">
+    <div className="w-full pb-24 sm:pb-28">
       <Link
         href="/analyze"
         className="inline-block text-sm text-secondary hover:opacity-80 transition-opacity mb-4 sm:mb-6"
@@ -149,11 +165,11 @@ export default function ResultsPage() {
           <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3">
             Recommended tracks
           </h2>
-          <ul className="space-y-3">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {recommendations.tracks.map((track) => (
               <li
                 key={track.id}
-                className="p-4 rounded-lg bg-surface border border-border flex flex-col sm:flex-row sm:items-center gap-3"
+                className="p-4 rounded-xl bg-surface border border-border flex flex-col sm:flex-row sm:items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm sm:text-base font-medium text-foreground truncate">

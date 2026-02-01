@@ -10,8 +10,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   useRequireAuth();
+  const displayName = user?.username ?? user?.email?.split("@")[0] ?? "";
+  const initials = displayName.length >= 2 ? displayName.slice(0, 2).toUpperCase() : displayName ? displayName[0].toUpperCase() : "?";
 
   if (isLoading) {
     return (
@@ -35,8 +37,15 @@ export default function DashboardLayout({
             <ThemeToggle />
             <Link
               href="/profile"
-              className="text-sm sm:text-base font-normal text-muted hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm sm:text-base font-normal text-muted hover:text-foreground transition-colors"
             >
+              <span className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary overflow-hidden shrink-0">
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </span>
               Profile
             </Link>
             <button
@@ -48,8 +57,10 @@ export default function DashboardLayout({
           </div>
         </nav>
       </header>
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-auto">
-        {children}
+      <main className="flex-1 w-full p-4 sm:p-6 md:p-8 overflow-auto">
+        <div className="w-full max-w-6xl mx-auto">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -69,7 +69,7 @@ export function NowPlayingBar({
   if (hasSpotify) {
     return (
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-surface border-t border-border">
-        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="w-full max-w-6xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">{track.name}</p>
             <p className="text-xs text-muted truncate">{track.artist}</p>
@@ -105,33 +105,44 @@ function NowPlayingYouTube({ track, onClose }: { track: Track; onClose: () => vo
 
   useEffect(() => {
     if (track.youtube_video_id) {
-      setVideoId(track.youtube_video_id);
-      setLoading(false);
+      const id = track.youtube_video_id;
+      queueMicrotask(() => {
+        setVideoId(id);
+        setLoading(false);
+      });
       return;
     }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setVideoId(null);
+        setLoading(true);
+      }
+    });
     const query = `${track.name} ${track.artist}`;
     getYouTubeVideoId(query)
       .then((id) => {
-        setVideoId(id);
+        if (!cancelled) setVideoId(id);
       })
       .finally(() => {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [track.name, track.artist, track.youtube_video_id]);
 
   if (loading) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-surface border-t border-border">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground truncate">{track.name}</p>
-            <p className="text-xs text-muted truncate">{track.artist}</p>
-          </div>
-          <p className="text-sm text-muted">Loading…</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+        <div className="text-center p-8">
+          <p className="text-foreground font-medium">{track.name}</p>
+          <p className="text-muted text-sm mt-1">{track.artist}</p>
+          <p className="text-muted text-sm mt-4">Loading video…</p>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-muted hover:text-foreground shrink-0"
+            className="mt-6 px-4 py-2 rounded-lg bg-surface border border-border text-foreground hover:bg-border transition-colors"
           >
             Close
           </button>
@@ -142,17 +153,15 @@ function NowPlayingYouTube({ track, onClose }: { track: Track; onClose: () => vo
 
   if (!videoId) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-surface border-t border-border">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground truncate">{track.name}</p>
-            <p className="text-xs text-muted truncate">{track.artist}</p>
-          </div>
-          <p className="text-sm text-muted">Video not found</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+        <div className="text-center p-8">
+          <p className="text-foreground font-medium">{track.name}</p>
+          <p className="text-muted text-sm mt-1">{track.artist}</p>
+          <p className="text-muted text-sm mt-4">Video not found</p>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-muted hover:text-foreground shrink-0"
+            className="mt-6 px-4 py-2 rounded-lg bg-surface border border-border text-foreground hover:bg-border transition-colors"
           >
             Close
           </button>
@@ -162,13 +171,12 @@ function NowPlayingYouTube({ track, onClose }: { track: Track; onClose: () => vo
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-surface border-t border-border">
-      <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground truncate">{track.name}</p>
-          <p className="text-xs text-muted truncate">{track.artist}</p>
-        </div>
-        <div className="w-full sm:w-[320px] aspect-video sm:aspect-auto sm:h-20 shrink-0 rounded-lg overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/95 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-4xl flex flex-col items-center gap-4">
+        <div className="w-full aspect-video max-h-[70vh] rounded-xl overflow-hidden border border-border shadow-2xl bg-surface">
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -177,13 +185,19 @@ function NowPlayingYouTube({ track, onClose }: { track: Track; onClose: () => vo
             title={`Play ${track.name} on YouTube`}
           />
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm text-muted hover:text-foreground shrink-0 self-start sm:self-center"
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-4 w-full max-w-4xl justify-between">
+          <div className="min-w-0">
+            <p className="text-foreground font-medium truncate">{track.name}</p>
+            <p className="text-muted text-sm truncate">{track.artist}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 px-5 py-2.5 rounded-lg bg-surface border border-border text-foreground hover:bg-border transition-colors font-medium"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -247,7 +261,7 @@ function NowPlayingAudio({ track, onClose }: { track: Track; onClose: () => void
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-surface border-t border-border">
-      <div className="max-w-2xl mx-auto flex flex-col gap-2">
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <button
             type="button"

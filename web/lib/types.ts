@@ -1,6 +1,8 @@
 export interface User {
   id: string;
   email: string;
+  username?: string | null;
+  profilePicture?: string | null;
 }
 
 export interface AuthResponse {
@@ -16,6 +18,7 @@ export interface LoginDto {
 
 export interface RegisterDto {
   email: string;
+  username: string;
   password: string;
 }
 

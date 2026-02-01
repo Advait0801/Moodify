@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -15,8 +16,8 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      toast.error("Email and password are required.");
+    if (!email.trim() || !username.trim() || !password) {
+      toast.error("Email, username and password are required.");
       return;
     }
     if (password.length < 6) {
@@ -29,7 +30,7 @@ export default function RegisterPage() {
     }
     setIsLoading(true);
     try {
-      await register({ email: email.trim(), password });
+      await register({ email: email.trim(), username: username.trim(), password });
       toast.success("Account created! Welcome to Moodify.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
@@ -54,6 +55,21 @@ export default function RegisterPage() {
             placeholder="you@example.com"
             className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
             autoComplete="email"
+            disabled={isLoading}
+          />
+        </div>
+        <div>
+          <label htmlFor="username" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
+            Username
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="johndoe"
+            className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
+            autoComplete="username"
             disabled={isLoading}
           />
         </div>

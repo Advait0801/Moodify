@@ -7,20 +7,20 @@ import { useAuth } from "@/contexts/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      toast.error("Email and password are required.");
+    if (!loginId.trim() || !password) {
+      toast.error("Email or username and password are required.");
       return;
     }
     setIsLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: loginId.trim(), password });
       toast.success("Welcome back!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login failed. Please try again.");
@@ -34,17 +34,17 @@ export default function LoginPage() {
       <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Login</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
-            Email
+          <label htmlFor="loginId" className="block text-xs sm:text-sm font-medium text-foreground mb-2">
+            Email or username
           </label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            id="loginId"
+            type="text"
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
+            placeholder="you@example.com or username"
             className="w-full px-4 py-2.5 rounded-md border border-border bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base font-normal"
-            autoComplete="email"
+            autoComplete="username"
             disabled={isLoading}
           />
         </div>
