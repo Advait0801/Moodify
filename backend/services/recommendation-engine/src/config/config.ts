@@ -25,4 +25,8 @@ export const config = {
         enabled: process.env.OPENAI_EXPLANATION_ENABLED !== 'false',
         timeoutMs: parseInt(process.env.OPENAI_EXPLANATION_TIMEOUT_MS || '5000', 10),
     },
+
+    youtube: {
+        apiKey: process.env.YOUTUBE_API_KEY || '',
+    },
 };

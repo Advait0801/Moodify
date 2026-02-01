@@ -16,6 +16,7 @@ export interface RecommendationResponse {
         name: string;
         artist: string;
         preview_url?: string;
+        youtube_video_id?: string;
     }>;
     emotion: string;
     explanation?: string;

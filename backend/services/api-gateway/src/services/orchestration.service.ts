@@ -32,6 +32,7 @@ export interface AnalyzeMoodResponse {
             name: string;
             artist: string;
             preview_url?: string;
+            youtube_video_id?: string;
         }>;
         playlist_id?: string;
         explanation?: string;

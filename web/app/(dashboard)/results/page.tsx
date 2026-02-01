@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MoodAnalyzeResponse } from "@/lib/types";
+import { NowPlayingBar } from "@/components/now-playing-bar";
 
 const RESULT_KEY = "moodify_analyze_result";
 
@@ -13,6 +14,10 @@ function isSpotifyTrack(id: string) {
 
 function isPlayableAudioUrl(url: string) {
   return url.includes("p.scdn.co") || url.endsWith(".mp3");
+}
+
+function isYouTubeTrack(url?: string) {
+  return url?.includes("youtube.com") ?? false;
 }
 
 function isValidResult(data: unknown): data is MoodAnalyzeResponse {
@@ -32,8 +37,13 @@ function isValidResult(data: unknown): data is MoodAnalyzeResponse {
 export default function ResultsPage() {
   const [result, setResult] = useState<MoodAnalyzeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingTrack, setPlayingTrack] = useState<{
+    id: string;
+    name: string;
+    artist: string;
+    preview_url?: string;
+    youtube_video_id?: string;
+  } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -62,30 +72,13 @@ export default function ResultsPage() {
     };
   }, [router]);
 
-  function togglePreview(trackId: string, previewUrl: string) {
-    if(playingId === trackId) {
-      audioRef.current?.pause();
-      setPlayingId(null);
+  function handlePlayTrack(track: { id: string; name: string; artist: string; preview_url?: string; youtube_video_id?: string }) {
+    if (playingTrack?.id === track.id) {
+      setPlayingTrack(null);
       return;
     }
-    if(!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-    const audio = audioRef.current;
-    audio.src = previewUrl;
-    audio.play().catch(() => {
-      setPlayingId(null);
-    });
-    setPlayingId(trackId);
+    setPlayingTrack(track);
   }
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if(!audio) return;
-    const handleEnded = () => setPlayingId(null);
-    audio.addEventListener("ended", handleEnded);
-    return () => audio.removeEventListener("ended", handleEnded);
-  }, []);
 
   if (error) {
     return (
@@ -117,7 +110,7 @@ export default function ResultsPage() {
   const confidencePercent = Math.round(emotion.confidence * 100);
 
   return (
-    <div className="max-w-2xl w-full pb-20 sm:pb-8">
+    <div className="max-w-2xl w-full pb-24 sm:pb-28">
       <Link
         href="/analyze"
         className="inline-block text-sm text-secondary hover:opacity-80 transition-opacity mb-4 sm:mb-6"
@@ -169,14 +162,30 @@ export default function ResultsPage() {
                   <p className="text-sm text-muted truncate">{track.artist}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                  {track.preview_url && isPlayableAudioUrl(track.preview_url) && (
+                  {(track.preview_url && isPlayableAudioUrl(track.preview_url)) ||
+                  isSpotifyTrack(track.id) ||
+                  isYouTubeTrack(track.preview_url) ? (
                     <button
                       type="button"
-                      onClick={() => togglePreview(track.id, track.preview_url!)}
-                      className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                      onClick={() => handlePlayTrack(track)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-opacity ${
+                        playingTrack?.id === track.id
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-primary text-primary-foreground hover:opacity-90"
+                      }`}
                     >
-                      {playingId === track.id ? "Pause" : "Preview"}
+                      {playingTrack?.id === track.id ? "Playing" : "Play"}
                     </button>
+                  ) : null}
+                  {track.preview_url && track.preview_url.includes("youtube.com") && (
+                    <a
+                      href={track.preview_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Search on YouTube
+                    </a>
                   )}
                   {isSpotifyTrack(track.id) && (
                     <a
@@ -188,19 +197,11 @@ export default function ResultsPage() {
                       Open in Spotify
                     </a>
                   )}
-                  {track.preview_url && track.preview_url.includes("youtube.com") && (
-                    <a
-                      href={track.preview_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Search on YouTube
-                    </a>
-                  )}
-                  {!track.preview_url && !isSpotifyTrack(track.id) && (
-                    <span className="text-xs text-muted">No preview</span>
-                  )}
+                  {!(track.preview_url && isPlayableAudioUrl(track.preview_url)) &&
+                    !isSpotifyTrack(track.id) &&
+                    !isYouTubeTrack(track.preview_url) && (
+                      <span className="text-xs text-muted">No preview</span>
+                    )}
                 </div>
               </li>
             ))}
@@ -210,6 +211,13 @@ export default function ResultsPage() {
           )}
         </section>
       </div>
+      <NowPlayingBar
+        track={playingTrack}
+        isSpotifyTrack={isSpotifyTrack}
+        isPlayablePreview={isPlayableAudioUrl}
+        isYouTubeTrack={isYouTubeTrack}
+        onClose={() => setPlayingTrack(null)}
+      />
     </div>
   );
 }

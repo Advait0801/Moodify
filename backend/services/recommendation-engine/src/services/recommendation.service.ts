@@ -1,4 +1,5 @@
 import { spotifyClient } from "../clients/spotify.client";
+import { youtubeClient } from "../clients/youtube.client";
 import { emotionMapperService, EmotionMapping } from "./emotion-mapper.service";
 import { recommendationRepository } from "../repositories/recommendation.repository";
 import { fallbackProviderService } from "./fallback-provider.service";
@@ -20,6 +21,7 @@ export interface RecommendationResponse {
         name: string;
         artist: string;
         preview_url?: string;
+        youtube_video_id?: string;
     }>;
     emotion: string;
     source?: 'spotify' | 'fallback';
@@ -119,13 +121,21 @@ export const recommendationService = {
                     20
                 );
 
-                const tracks = fallBackTracks.map((track) => ({
-                    id: track.id,
-                    name: track.name,
-                    artist: track.artists[0]?.name || 'Unknown',
-                    preview_url: track.preview_url || undefined,
-                }));
+                const tracksWithYouTube = await Promise.all(
+                    fallBackTracks.map(async (track) => {
+                        const artist = track.artists[0]?.name || 'Unknown';
+                        const youtubeVideoId = await youtubeClient.searchVideoId(track.name, artist);
+                        return {
+                            id: track.id,
+                            name: track.name,
+                            artist,
+                            preview_url: track.preview_url || undefined,
+                            ...(youtubeVideoId && { youtube_video_id: youtubeVideoId }),
+                        };
+                    })
+                );
 
+                const tracks = tracksWithYouTube;
                 const trackIds = tracks.map((t) => t.id);
 
                 if (request.userId !== 'anonymous') {

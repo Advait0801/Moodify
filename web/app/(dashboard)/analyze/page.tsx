@@ -6,13 +6,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { MoodAnalyzeResponse } from "@/lib/types";
+import { CameraCapture } from "@/components/camera-capture";
 
 const RESULT_KEY = "moodify_analyze_result";
 
 type Mode = "photo" | "text";
+type PhotoSource = "upload" | "camera";
 
 export default function AnalyzePage() {
   const [mode, setMode] = useState<Mode>("photo");
+  const [photoSource, setPhotoSource] = useState<PhotoSource>("upload");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -109,6 +112,7 @@ export default function AnalyzePage() {
           onClick={() => {
             setMode("photo");
             setFile(null);
+            setPhotoSource("upload");
           }}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-opacity ${
             mode === "photo"
@@ -137,47 +141,81 @@ export default function AnalyzePage() {
       <form onSubmit={handleSubmit} className="mt-6 sm:mt-8 space-y-4 sm:space-y-6">
         {mode === "photo" ? (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Upload your photo
-            </label>
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-opacity ${
-                dragActive
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-surface/50"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              {file ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-foreground font-medium">{file.name}</p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      clearFile();
-                    }}
-                    className="text-sm text-secondary hover:opacity-80"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-muted">
-                  Drag and drop an image here, or click to browse
-                </p>
-              )}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoSource("upload");
+                  setFile(null);
+                }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-opacity ${
+                  photoSource === "upload"
+                    ? "bg-accent/20 text-accent"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoSource("camera");
+                  setFile(null);
+                }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-opacity ${
+                  photoSource === "camera"
+                    ? "bg-accent/20 text-accent"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Camera
+              </button>
             </div>
+            {photoSource === "upload" ? (
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-opacity ${
+                  dragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-surface/50"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                {file ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-foreground font-medium">{file.name}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        clearFile();
+                      }}
+                      className="text-sm text-secondary hover:opacity-80"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">
+                    Drag and drop an image here, or click to browse
+                  </p>
+                )}
+              </div>
+            ) : (
+              <CameraCapture
+                onCapture={(f) => setFile(f)}
+                onError={(msg) => toast.error(msg)}
+              />
+            )}
           </div>
         ) : (
           <div>
