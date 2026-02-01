@@ -62,10 +62,10 @@ services:
       dockerfile: Dockerfile
     container_name: moodify-api-gateway
     ports:
-      - "3000:3000"
+      - "3002:3002"
     environment:
       - NODE_ENV=development
-      - PORT=3000
+      - PORT=3002
       - DATABASE_URL=postgresql://moodify:moodify_dev@postgres:5432/moodify
       - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
       - MOOD_DETECTION_SERVICE_URL=http://mood-detection:8001
@@ -94,7 +94,7 @@ services:
       dockerfile: Dockerfile
     container_name: moodify-recommendation-engine
     ports:
-      - "3001:3001"
+      - "3011:3011"
     env_file:
       - ./services/recommendation-engine/.env
     environment:
