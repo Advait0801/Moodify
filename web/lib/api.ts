@@ -33,7 +33,19 @@ async function request<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  } catch (err) {
+    if (typeof window !== "undefined" && window.location?.protocol === "https:" && BASE_URL.startsWith("http://")) {
+      throw new ApiError(
+        "Cannot reach the API: this site uses HTTPS but the API URL is HTTP. Browsers block that. Use HTTPS for the API (e.g. load balancer with SSL) or set NEXT_PUBLIC_API_URL to an HTTPS URL.",
+        0
+      );
+    }
+    const msg = err instanceof Error ? err.message : "Network error";
+    throw new ApiError(msg || "Cannot reach the server. Check your connection and that the API is running.", 0);
+  }
 
   if(res.status === 401 && !skipAuthClear) {
     clearAuth();
@@ -91,11 +103,23 @@ export const api = {
     const formData = new FormData();
     formData.append("file", image);
 
-    const res = await fetch(`${BASE_URL}/mood/analyze`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${BASE_URL}/mood/analyze`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+    } catch (err) {
+      if (typeof window !== "undefined" && window.location?.protocol === "https:" && BASE_URL.startsWith("http://")) {
+        throw new ApiError(
+          "Cannot reach the API: this site uses HTTPS but the API URL is HTTP. Use HTTPS for the API.",
+          0
+        );
+      }
+      const msg = err instanceof Error ? err.message : "Network error";
+      throw new ApiError(msg || "Cannot reach the server.", 0);
+    }
 
     if (res.status === 401) {
       clearAuth();
