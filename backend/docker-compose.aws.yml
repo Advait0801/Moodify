@@ -67,18 +67,15 @@ services:
       dockerfile: Dockerfile
     container_name: moodify-recommendation-engine
     ports:
-      - "3011:3011"
+      - "3011:3001"
     env_file:
       - ./services/recommendation-engine/.env
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=${DATABASE_URL}
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     depends_on: []
-    volumes:
-      - ./services/recommendation-engine:/app
-      - recommendation_engine_node_modules:/app/node_modules
-      - recommendation_engine_dist:/app/dist
 
   analytics-worker:
     image: moodify-analytics-worker:latest
@@ -91,19 +88,10 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379
       - REDIS_QUEUE_NAME=mood_history_queue
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      - ./services/analytics-worker:/app
-      - analytics_worker_node_modules:/app/node_modules
-      - analytics_worker_dist:/app/dist
 
 volumes:
   redis_data:
-  api_gateway_node_modules:
-  api_gateway_dist:
-  recommendation_engine_node_modules:
-  recommendation_engine_dist:
-  analytics_worker_node_modules:
-  analytics_worker_dist:

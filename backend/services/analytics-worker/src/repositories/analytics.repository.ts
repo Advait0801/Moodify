@@ -1,8 +1,19 @@
 import { Pool } from "pg";
 import { config } from "../config/config";
 
+let connectionString = config.database.url ?? "";
+const isRds = connectionString.includes("rds.amazonaws.com") || connectionString.includes("sslmode=require");
+if (isRds) {
+    connectionString = connectionString
+        .replace(/\?sslmode=[^&]*/g, "?")
+        .replace(/&sslmode=[^&]*/g, "")
+        .replace(/\?&/g, "?")
+        .replace(/\?$/, "");
+}
+
 const pool = new Pool({
-    connectionString: config.database.url,
+    connectionString,
+    ...(isRds && { ssl: { rejectUnauthorized: false } }),
 });
 
 export interface MoodHistoryRecord {
