@@ -7,6 +7,7 @@
 
 import Foundation
 internal import Combine
+import UIKit
 
 @MainActor
 final class ProfileViewModel: ObservableObject {

@@ -61,7 +61,8 @@ final class APIClient {
             AuthStorage.shared.clear()
         }
         guard http.statusCode >= 200, http.statusCode < 300 else {
-            let message = (try? JSONDecoder().decode([String: String].self, from: data))["error"]
+            let errorDict = try? JSONDecoder().decode([String: String].self, from: data)
+            let message = errorDict?["error"]
             throw APIError.status(http.statusCode, message)
         }
         do {
@@ -123,7 +124,8 @@ final class APIClient {
         guard let http = response as? HTTPURLResponse else { throw APIError.status(0, "Invalid response") }
         if http.statusCode == 401 { AuthStorage.shared.clear() }
         guard http.statusCode >= 200, http.statusCode < 300 else {
-            let message = (try? JSONDecoder().decode([String: String].self, from: data))["error"]
+            let errorDict = try? JSONDecoder().decode([String: String].self, from: data)
+            let message = errorDict?["error"]
             throw APIError.status(http.statusCode, message)
         }
         return try JSONDecoder().decode(MoodAnalyzeResponse.self, from: data)
