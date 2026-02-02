@@ -109,3 +109,24 @@ next-env.d.ts
 
 # Note: package-lock.json, yarn.lock should be committed for reproducible builds
 notes
+
+ios/
+
+# iOS / Xcode
+ios/DerivedData/
+ios/build/
+**/xcuserdata/
+**/*.xcuserstate
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+ios/.build/
+ios/Pods/
+Carthage/Build
+*.xcscmblueprint
