@@ -1,8 +1,12 @@
 import { Pool } from 'pg';
 import { config } from '../config/config';
 
+const connectionString = config.database.url;
+const useRdsSsl = connectionString?.includes('sslmode=require') ?? false;
+
 const pool = new Pool({
-    connectionString: config.database.url,
+    connectionString,
+    ...(useRdsSsl && { ssl: { rejectUnauthorized: false } }),
 });
 
 export interface User {
