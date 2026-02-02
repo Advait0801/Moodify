@@ -1,0 +1,112 @@
+name: moodify
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: moodify-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mood-detection:
+    image: moodify-mood-detection:latest
+    build:
+      context: ./services/mood-detection
+      dockerfile: Dockerfile
+    container_name: moodify-mood-detection
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - HOST=0.0.0.0
+      - MODEL_PATH=/app/models/mood_mobilenetv2.onnx
+    volumes:
+      - ./services/mood-detection/models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway:
+    image: moodify-api-gateway:latest
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: moodify-api-gateway
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - MOOD_DETECTION_SERVICE_URL=http://mood-detection:8001
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-engine:3001
+      - REDIS_URL=redis://redis:6379
+      - MOOD_SMOOTHING_WINDOW_SIZE=${MOOD_SMOOTHING_WINDOW_SIZE:-3}
+    depends_on:
+      redis:
+        condition: service_healthy
+      mood-detection:
+        condition: service_healthy
+      recommendation-engine:
+        condition: service_started
+    volumes:
+      - ./services/api-gateway:/app
+      - api_gateway_node_modules:/app/node_modules
+      - api_gateway_dist:/app/dist
+
+  recommendation-engine:
+    image: moodify-recommendation-engine:latest
+    build:
+      context: ./services/recommendation-engine
+      dockerfile: Dockerfile
+    container_name: moodify-recommendation-engine
+    ports:
+      - "3011:3011"
+    env_file:
+      - ./services/recommendation-engine/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on: []
+    volumes:
+      - ./services/recommendation-engine:/app
+      - recommendation_engine_node_modules:/app/node_modules
+      - recommendation_engine_dist:/app/dist
+
+  analytics-worker:
+    image: moodify-analytics-worker:latest
+    build:
+      context: ./services/analytics-worker
+      dockerfile: Dockerfile
+    container_name: moodify-analytics-worker
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - REDIS_QUEUE_NAME=mood_history_queue
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/analytics-worker:/app
+      - analytics_worker_node_modules:/app/node_modules
+      - analytics_worker_dist:/app/dist
+
+volumes:
+  redis_data:
+  api_gateway_node_modules:
+  api_gateway_dist:
+  recommendation_engine_node_modules:
+  recommendation_engine_dist:
+  analytics_worker_node_modules:
+  analytics_worker_dist:

@@ -108,3 +108,4 @@ next-env.d.ts
 .pnpm-debug.log*
 
 # Note: package-lock.json, yarn.lock should be committed for reproducible builds
+notes
