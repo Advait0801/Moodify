@@ -1,12 +1,19 @@
 import { Pool } from 'pg';
 import { config } from '../config/config';
 
-const connectionString = config.database.url;
-const useRdsSsl = connectionString?.includes('sslmode=require') ?? false;
+let connectionString = config.database.url ?? '';
+const isRds = connectionString.includes('rds.amazonaws.com') || connectionString.includes('sslmode=require');
+if (isRds) {
+    connectionString = connectionString
+        .replace(/\?sslmode=[^&]*/g, '?')
+        .replace(/&sslmode=[^&]*/g, '')
+        .replace(/\?&/g, '?')
+        .replace(/\?$/, '');
+}
 
 const pool = new Pool({
     connectionString,
-    ...(useRdsSsl && { ssl: { rejectUnauthorized: false } }),
+    ...(isRds && { ssl: { rejectUnauthorized: false } }),
 });
 
 export interface User {
