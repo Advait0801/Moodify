@@ -13,6 +13,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://www.docker.com)
 [![ONNX](https://img.shields.io/badge/ONNX-Inference-orange.svg)](https://onnx.ai)
 [![Spotify](https://img.shields.io/badge/Spotify-API-1DB954.svg)](https://developer.spotify.com)
+[![Swift](https://img.shields.io/badge/Swift-5-SwiftUI-orange.svg)](https://swift.org)
 
 </div>
 
@@ -20,7 +21,7 @@
 
 ## 📱 Overview
 
-**Moodify** is a full-stack mood-based music recommendation system that uses AI to detect emotional state from a photo or text, then recommends songs and playlists via Spotify. Built with a microservice-oriented backend (Node.js API Gateway, FastAPI mood detection, Node.js recommendation engine) and a Next.js web app, it demonstrates production-ready backend engineering, ML integration, and system design.
+**Moodify** is a full-stack mood-based music recommendation system that uses AI to detect emotional state from a photo or text, then recommends songs and playlists via Spotify. Built with a microservice-oriented backend (Node.js API Gateway, FastAPI mood detection, Node.js recommendation engine), a Next.js web app, and a native **iOS app**, it demonstrates production-ready backend engineering, ML integration, and system design.
 
 ### Key Highlights
 
@@ -28,7 +29,7 @@
 - 🎵 **Spotify Integration**: OAuth 2.0, playlist creation, track recommendations with preview URLs
 - 🔐 **Secure Auth**: JWT authentication with bcrypt password hashing, optional username and profile picture
 - 🐳 **Dockerized Backend**: API Gateway, Mood Detection (Python), Recommendation Engine, Analytics Worker, Redis, PostgreSQL
-- 🎨 **Modern Web UI**: Next.js App Router, Tailwind CSS, light/dark theme, camera capture and audio player
+- 🎨 **Web & iOS**: Next.js App Router (Tailwind, light/dark, camera/audio) and native iOS app (Swift/SwiftUI) sharing the same APIs
 - 📊 **Mood History**: Async analytics worker persists mood history; profile shows past recommendations
 - ☁️ **AWS-Ready**: Deploy backend on EC2 + RDS + CloudFront, frontend on Amplify (HTTPS)
 
@@ -54,11 +55,8 @@
 
 ### User Experience
 
-- **Dashboard**: Hero, quick actions (Analyze Photo, Analyze Text), recent activity
-- **Analyze**: Camera/file upload or text input, loading states, redirect to results
-- **Results**: Emotion, confidence, track list with play/preview and YouTube modal
-- **Profile**: Avatar (initials or profile picture), username, email, password change, past recommendations (local storage + API)
-- **Theme**: Light/dark toggle, responsive layout
+- **Web (Next.js)**: Dashboard (hero, Analyze Photo/Text), Analyze (camera/file or text), Results (emotion, tracks, play/preview, YouTube modal), Profile (avatar, username, email, password, past recommendations), light/dark theme
+- **iOS (Swift/SwiftUI)**: Login, Register, Dashboard, Analyze (camera/photo or text), Results (emotion, tracks, previews), Profile — same backend APIs, native UI
 
 ---
 
@@ -68,8 +66,8 @@
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
-│   Next.js Web   │◄───────►│   API Gateway    │◄───────►│   PostgreSQL    │
-│   (Frontend)    │  REST   │   (Node.js)      │  HTTP   │   (RDS)         │
+│  Web / iOS      │◄───────►│   API Gateway    │◄───────►│   PostgreSQL    │
+│  (Clients)      │  REST   │   (Node.js)      │  HTTP   │   (RDS)         │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
       │                              │
       │                    ┌─────────┴─────────┐
@@ -113,13 +111,10 @@
 
 ## 🛠️ Tech Stack
 
-### Frontend (Web)
+### Frontend
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript 5
-- **UI**: React 19, Tailwind CSS 4, next-themes (light/dark)
-- **State**: React Context (auth), local storage (mood history)
-- **Networking**: Fetch to API Gateway (env: `NEXT_PUBLIC_API_URL`)
+- **Web**: Next.js 16 (App Router), TypeScript 5, React 19, Tailwind CSS 4, next-themes (light/dark). Auth via React Context; Fetch to API Gateway (`NEXT_PUBLIC_API_URL`).
+- **iOS**: Swift, SwiftUI. Views: Login, Register, Dashboard, Analyze, Results, Profile. `APIClient` + `AuthStorage`; same API Gateway base URL.
 
 ### Backend (Node.js)
 
@@ -154,7 +149,7 @@
 ## 🚧 Future Enhancements
 
 - [ ] Spotify OAuth login (use Spotify identity)
-- [ ] Mobile app (Flutter / React Native) reusing same backend
+- [ ] Android app (Kotlin/Compose) reusing same backend
 - [ ] Custom playlists per user stored in DB
 - [ ] More emotion labels and mood mappings
 - [ ] A/B testing for recommendation strategies
