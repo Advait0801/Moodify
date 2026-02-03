@@ -1,18 +1,8 @@
-//
-//  AnalyzeView.swift
-//  Moodify-iOS
-//
-//  Created by Advait Naik on 2/2/26.
-//
-
 import SwiftUI
 
-struct ResultNavigationWrapper: Identifiable, Hashable {
+struct ResultNavigationWrapper: Identifiable {
     let id = UUID()
     let value: MoodAnalyzeResponse
-
-    static func == (lhs: ResultNavigationWrapper, rhs: ResultNavigationWrapper) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 struct AnalyzeView: View {
@@ -41,6 +31,10 @@ struct AnalyzeView: View {
                     Text(msg)
                         .font(.subheadline)
                         .foregroundColor(.red)
+                        .padding(layout.spacingS)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                         .onTapGesture { viewModel.clearError() }
                 }
 
@@ -53,9 +47,14 @@ struct AnalyzeView: View {
                                 .scaledToFit()
                                 .frame(maxHeight: layout.scaled(280))
                                 .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: layout.cardCorner)
+                                        .stroke(Color("Divider"), lineWidth: 1)
+                                )
                             Button("Remove") {
                                 viewModel.image = nil
                             }
+                            .font(.subheadline.weight(.medium))
                             .foregroundColor(Color("TextSecondary"))
                         } else {
                             Button {
@@ -63,16 +62,25 @@ struct AnalyzeView: View {
                             } label: {
                                 VStack(spacing: layout.spacingM) {
                                     Image(systemName: "photo.badge.plus")
-                                        .font(.largeTitle)
-                                        .foregroundColor(Color("TextSecondary"))
+                                        .font(.system(size: 48))
+                                        .foregroundStyle(
+                                            LinearGradient(colors: [Color("Primary").opacity(0.8), Color("Accent").opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                        )
                                     Text("Tap to add photo")
                                         .font(.subheadline)
                                         .foregroundColor(Color("TextSecondary"))
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(layout.spacingXL)
-                                .background(Color("Surface"))
-                                .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                                .background(
+                                    RoundedRectangle(cornerRadius: layout.cardCorner)
+                                        .fill(Color("Surface"))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8]))
+                                                .foregroundColor(Color("Divider"))
+                                        )
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -88,6 +96,10 @@ struct AnalyzeView: View {
                             .scrollContentBackground(.hidden)
                             .background(Color("Surface"))
                             .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: layout.cardCorner)
+                                    .stroke(Color("Divider"), lineWidth: 1)
+                            )
                             .focused($textFocused)
                     }
                 }
@@ -111,6 +123,9 @@ struct AnalyzeView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color("Primary"))
                 .disabled(!viewModel.canSubmit || viewModel.isLoading)
+                .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                .scaleEffect(viewModel.isLoading ? 0.98 : 1)
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
             }
             .padding(layout.spacingM)
         }
@@ -130,10 +145,8 @@ struct AnalyzeView: View {
         .fullScreenCover(isPresented: $showCamera) {
             ImagePicker(source: .camera, onPick: { viewModel.image = $0; showCamera = false }, onCancel: { showCamera = false })
         }
-        .onChange(of: viewModel.result != nil) { _, isPresent in
-            if isPresent, let r = viewModel.result {
-                resultToShow = ResultNavigationWrapper(value: r)
-            }
+        .onChange(of: viewModel.result) { _, new in
+            if let r = new { resultToShow = ResultNavigationWrapper(value: r) }
         }
         .navigationDestination(item: $resultToShow) { wrapper in
             ResultsView(result: wrapper.value)
@@ -144,4 +157,3 @@ struct AnalyzeView: View {
         }
     }
 }
-

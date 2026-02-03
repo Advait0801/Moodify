@@ -1,10 +1,3 @@
-//
-//  RegisterView.swift
-//  Moodify-iOS
-//
-//  Created by Advait Naik on 2/2/26.
-//
-
 import SwiftUI
 
 struct RegisterView: View {
@@ -16,12 +9,16 @@ struct RegisterView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: layout.spacingL) {
                 Text("Create account")
-                    .font(.title2.bold())
+                    .font(.title.bold())
                     .foregroundColor(Color("TextPrimary"))
                 if let msg = viewModel.errorMessage {
                     Text(msg)
                         .font(.subheadline)
                         .foregroundColor(.red)
+                        .padding(layout.spacingS)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                         .onTapGesture { viewModel.clearError() }
                 }
                 VStack(alignment: .leading, spacing: layout.spacingS) {
@@ -37,6 +34,10 @@ struct RegisterView: View {
                         .padding(layout.spacingM)
                         .background(Color("Surface"))
                         .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                .stroke(Color("Divider"), lineWidth: 1)
+                        )
                 }
                 VStack(alignment: .leading, spacing: layout.spacingS) {
                     Text("Username")
@@ -50,6 +51,10 @@ struct RegisterView: View {
                         .padding(layout.spacingM)
                         .background(Color("Surface"))
                         .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                .stroke(Color("Divider"), lineWidth: 1)
+                        )
                 }
                 VStack(alignment: .leading, spacing: layout.spacingS) {
                     Text("Password")
@@ -61,6 +66,10 @@ struct RegisterView: View {
                         .padding(layout.spacingM)
                         .background(Color("Surface"))
                         .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                .stroke(Color("Divider"), lineWidth: 1)
+                        )
                 }
                 VStack(alignment: .leading, spacing: layout.spacingS) {
                     Text("Confirm password")
@@ -72,6 +81,10 @@ struct RegisterView: View {
                         .padding(layout.spacingM)
                         .background(Color("Surface"))
                         .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                .stroke(Color("Divider"), lineWidth: 1)
+                        )
                 }
                 Button {
                     focused = false
@@ -91,11 +104,16 @@ struct RegisterView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color("Primary"))
                 .disabled(viewModel.isLoading)
+                .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                .scaleEffect(viewModel.isLoading ? 0.98 : 1)
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
             }
             .padding(layout.spacingM)
         }
         .scrollContentBackground(.hidden)
-        .background(Color("Background"))
+        .background(
+            LinearGradient(colors: [Color("Background"), Color("Background").opacity(0.95)], startPoint: .top, endPoint: .bottom)
+        )
         .navigationTitle("Moodify")
         .navigationBarTitleDisplayMode(.inline)
     }

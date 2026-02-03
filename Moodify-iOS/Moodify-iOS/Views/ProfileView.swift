@@ -1,10 +1,3 @@
-//
-//  ProfileView.swift
-//  Moodify-iOS
-//
-//  Created by Advait Naik on 2/2/26.
-//
-
 import SwiftUI
 
 struct ProfileView: View {
@@ -34,6 +27,7 @@ struct ProfileView: View {
                                         LinearGradient(colors: [Color("Primary"), Color("Accent")], startPoint: .topLeading, endPoint: .bottomTrailing)
                                     )
                                     .frame(width: layout.scaled(80), height: layout.scaled(80))
+                                    .shadow(color: Color("Primary").opacity(0.35), radius: 10, x: 0, y: 4)
                                 if let urlString = user.profilePicture, urlString.hasPrefix("data:"), let comma = urlString.firstIndex(of: ",") {
                                     let base64 = String(urlString[urlString.index(after: comma)...])
                                     if let data = Data(base64Encoded: base64), let img = UIImage(data: data) {
@@ -78,8 +72,11 @@ struct ProfileView: View {
                         .disabled(viewModel.pictureLoading)
                     }
                     .padding(layout.cardPadding)
-                    .background(Color("Surface"))
-                    .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                    .background(
+                        RoundedRectangle(cornerRadius: layout.cardCorner)
+                            .fill(Color("Surface"))
+                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: layout.spacingM) {
@@ -90,6 +87,10 @@ struct ProfileView: View {
                         Text(msg)
                             .font(.caption)
                             .foregroundColor(.red)
+                            .padding(layout.spacingS)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             .onTapGesture { viewModel.clearError() }
                     }
                     VStack(alignment: .leading, spacing: layout.spacingS) {
@@ -102,6 +103,10 @@ struct ProfileView: View {
                             .padding(layout.spacingM)
                             .background(Color("Surface"))
                             .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: layout.cardCorner)
+                                    .stroke(Color("Divider"), lineWidth: 1)
+                            )
                     }
                     VStack(alignment: .leading, spacing: layout.spacingS) {
                         Text("New password")
@@ -113,6 +118,10 @@ struct ProfileView: View {
                             .padding(layout.spacingM)
                             .background(Color("Surface"))
                             .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: layout.cardCorner)
+                                    .stroke(Color("Divider"), lineWidth: 1)
+                            )
                     }
                     VStack(alignment: .leading, spacing: layout.spacingS) {
                         Text("Confirm new password")
@@ -124,6 +133,10 @@ struct ProfileView: View {
                             .padding(layout.spacingM)
                             .background(Color("Surface"))
                             .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: layout.cardCorner)
+                                    .stroke(Color("Divider"), lineWidth: 1)
+                            )
                     }
                     Button {
                         passwordFocused = false
@@ -143,10 +156,16 @@ struct ProfileView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Color("Primary"))
                     .disabled(viewModel.passwordLoading)
+                    .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                    .scaleEffect(viewModel.passwordLoading ? 0.98 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.passwordLoading)
                 }
                 .padding(layout.cardPadding)
-                .background(Color("Surface"))
-                .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                .background(
+                    RoundedRectangle(cornerRadius: layout.cardCorner)
+                        .fill(Color("Surface"))
+                        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                )
 
                 VStack(alignment: .leading, spacing: layout.spacingM) {
                     Text("Past recommendations")
@@ -159,12 +178,12 @@ struct ProfileView: View {
                             .padding(layout.spacingM)
                     } else {
                         ForEach(viewModel.history) { entry in
-                            HStack {
+                            HStack(spacing: layout.spacingM) {
                                 Text(entry.emotion)
                                     .font(.subheadline.weight(.medium))
                                     .padding(.horizontal, layout.spacingM)
                                     .padding(.vertical, layout.spacingS)
-                                    .background(Color.moodifyMood(for: entry.emotion).opacity(0.2))
+                                    .background(Color.moodifyMood(for: entry.emotion).opacity(0.25))
                                     .clipShape(Capsule())
                                 Text(entry.inputType == "photo" ? "Photo" : "Text")
                                     .font(.caption)
@@ -176,8 +195,11 @@ struct ProfileView: View {
                             }
                             .padding(.vertical, layout.spacingS)
                             .padding(.horizontal, layout.spacingM)
-                            .background(Color("Surface"))
-                            .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color("Surface"))
+                                    .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+                            )
                         }
                     }
                 }
@@ -193,6 +215,7 @@ struct ProfileView: View {
                     auth.clear()
                 }
                 .foregroundColor(.red)
+                .font(.subheadline.weight(.medium))
             }
         }
         .onAppear {
