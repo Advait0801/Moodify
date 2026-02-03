@@ -169,7 +169,7 @@
 
 <div align="center">
 
-**Built with ❤️ using TypeScript, Python, Next.js, FastAPI, and Spotify**
+**Built with ❤️ using TypeScript, Python, Next.js, SwiftUI, FastAPI, and Spotify**
 
 ⭐ Star this repo if you find it helpful!
 
