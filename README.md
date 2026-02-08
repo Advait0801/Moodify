@@ -105,7 +105,80 @@
 1. **Auth**: User registers/logs in → API Gateway (JWT, bcrypt) → PostgreSQL `users`
 2. **Photo Analyze**: Client uploads image → API Gateway (auth) → Mood Detection (ONNX emotion) → API Gateway (smoothing) → Recommendation Engine (Spotify + optional OpenAI) → response with tracks
 3. **Text Analyze**: Client sends text → API Gateway (auth) → Recommendation Engine (OpenAI text-to-emotion) → Spotify recommendations → response
-4. **Analytics**: API Gateway enqueues mood job to Redis → Analytics Worker consumes → writes to PostgreSQL `mood_history`
+4. **Analytics**: Mood smoothing uses Redis (recent moods per user). A separate Analytics Worker exists that would consume a queue and write to `mood_history`; see [Implementation notes](#-implementation-notes--readme-vs-code) below.
+
+---
+
+## 🔄 Workflow (step-by-step)
+
+*What actually happens, and what happens when something fails.*
+
+### 1. User signs up or logs in
+
+- **Register**: Client sends email, password (optional username). API Gateway hashes password with bcrypt, inserts into PostgreSQL `users`. Returns JWT. If email already exists → 409/400.
+- **Login**: Client sends email (or username) + password. API Gateway looks up user, compares password with bcrypt. If valid → returns JWT; if not → 401.
+- **Failures**: Invalid body → 400. DB down → 500. JWT is used in `Authorization: Bearer <token>` for protected routes.
+
+### 2. User uploads a photo for mood analysis
+
+- **Request**: Web or iOS sends `POST /mood/analyze` with `multipart/form-data` (image file). **Auth required** (JWT).
+- **No file**: API returns 400 "No file provided".
+- **API Gateway** receives the file, reads it into a buffer, calls the **Mood Detection** service (FastAPI) at `POST /infer/mood` with the image.
+- **Mood Detection**:
+  - Decodes the image (invalid image → raises, API Gateway returns 500).
+  - Resizes if larger than max dimension.
+  - **Face detection**: OpenCV Haar cascade. If **no face is found**, it still runs inference using a **center crop** of the image and returns `face_detected: false` (no error).
+  - Preprocesses the crop (normalize, model input size), runs **ONNX** inference, returns `predicted_emotion`, `confidence`, `emotion_probabilities`, `face_detected`.
+- **If Mood Detection fails** (timeout, crash, 5xx): API Gateway catches the error and rethrows → client gets 500 "Mood detection failed".
+- **API Gateway** then:
+  - Pushes this mood to **Redis** (per-user list of recent emotion probabilities for **mood smoothing**).
+  - Optionally loads recent moods from Redis and **averages** probabilities over a small window (smoothing).
+  - Calls **Recommendation Engine** with the (possibly smoothed) emotion and confidence.
+
+### 3. Recommendation Engine (same for photo and text flows)
+
+- **Input**: Emotion, confidence, userId, optional emotion probabilities.
+- **Low confidence**: If confidence is below a threshold (e.g. 0.4), the engine **forces neutral** mood and uses neutral recommendations (no error).
+- **Emotion mapping**: Maps emotion (e.g. happy, sad, angry) to Spotify-style params (genres, energy, valence, danceability). Can **blend** from probabilities for richer mapping.
+- **Spotify path**:
+  - Gets an access token via **client_credentials** (server-side; no user Spotify login).
+  - Calls Spotify **Recommendations API** with seed genres and target audio features.
+  - If **Spotify fails** (no token, rate limit, API error): catches error and falls back (see below).
+  - If Spotify succeeds: returns tracks with `preview_url` (Spotify 30s preview). **No playlist is created on Spotify**; we only get track recommendations. Optionally calls **OpenAI** for a short explanation; if OpenAI fails, explanation is omitted (no error).
+- **Fallback path** (when Spotify fails or is not configured):
+  - Uses **curated playlists** (hardcoded tracks per emotion). For each track, optionally calls **YouTube Data API** to get a video ID; if no API key or YouTube fails, `youtube_video_id` is just missing (track still returned with a search URL).
+  - If **both Spotify and fallback** fail → Recommendation Engine throws → client gets 500.
+- **Persistence**: For non-anonymous users, the engine writes the recommendation (user_id, emotion, track IDs) to PostgreSQL `recommendations`. There is **no API** that returns “past recommendations” for the profile; the web/iOS profile “past recommendations” come from **local storage** only.
+
+### 4. User enters text for mood analysis
+
+- **Request**: `POST /mood/analyze/text` with `{ "text": "..." }`. **No auth required**; if no user, `userId` is `"anonymous"`.
+- **Recommendation Engine** calls **OpenAI** (text-to-emotion) to get an emotion and confidence. If that fails → client gets 500 "Text mood analysis failed".
+- Same recommendation flow as above (Spotify → fallback, DB save for logged-in users).
+
+### 5. What is *not* wired end-to-end
+
+- **Mood history for analytics**: The **Analytics Worker** is built to consume a Redis queue and insert into `mood_history`. The **API Gateway never pushes jobs to that queue**; it only uses Redis for mood smoothing. So `mood_history` is not populated by the current flow.
+- **Spotify playlist creation**: README mentions “playlist creation”; we only **recommend** tracks. We do not create a playlist on the user’s Spotify account (that would require user OAuth).
+- **Profile “past recommendations”**: Stored in DB by the Recommendation Engine, but the API does not expose “my past recommendations”; the profile screen uses **local storage** only.
+
+---
+
+## 📋 Implementation notes (README vs code)
+
+| README / claim | Status |
+|----------------|--------|
+| Photo → face detection → emotion → recommendations | ✅ Implemented. No-face case uses center crop, returns `face_detected: false`. |
+| Text → OpenAI emotion → recommendations | ✅ Implemented. |
+| JWT auth, bcrypt, optional username, profile picture | ✅ Implemented. |
+| Mood smoothing (Redis) | ✅ Implemented (recent moods per user in Redis). |
+| Spotify recommendations, preview URLs | ✅ Implemented (client_credentials; no user OAuth). |
+| Optional Spotify playlist | ❌ Not implemented. We don’t create a playlist on Spotify; schema has `spotify_playlist_id` but it’s never set. |
+| YouTube video IDs for tracks | ✅ Implemented when using **fallback** provider (YouTube Data API). Spotify path returns only `preview_url`, no `youtube_video_id`. |
+| Optional AI explanation (OpenAI) | ✅ Implemented; failure is ignored and response has no explanation. |
+| Analytics Worker writes mood_history | ⚠️ Worker exists and would write to `mood_history`, but **API Gateway does not enqueue jobs** to the worker’s queue; mood_history stays empty. |
+| Profile “past recommendations” from API | ❌ Not implemented. Past recommendations on profile are from **local storage** only. DB stores them but no endpoint returns them. |
+| Text analyze requires auth | ❌ No; `/mood/analyze/text` has no auth middleware; can be called anonymously. |
 
 ---
 
