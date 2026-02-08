@@ -164,24 +164,6 @@
 
 ---
 
-## 📋 Implementation notes (README vs code)
-
-| README / claim | Status |
-|----------------|--------|
-| Photo → face detection → emotion → recommendations | ✅ Implemented. No-face case uses center crop, returns `face_detected: false`. |
-| Text → OpenAI emotion → recommendations | ✅ Implemented. |
-| JWT auth, bcrypt, optional username, profile picture | ✅ Implemented. |
-| Mood smoothing (Redis) | ✅ Implemented (recent moods per user in Redis). |
-| Spotify recommendations, preview URLs | ✅ Implemented (client_credentials; no user OAuth). |
-| Optional Spotify playlist | ❌ Not implemented. We don’t create a playlist on Spotify; schema has `spotify_playlist_id` but it’s never set. |
-| YouTube video IDs for tracks | ✅ Implemented when using **fallback** provider (YouTube Data API). Spotify path returns only `preview_url`, no `youtube_video_id`. |
-| Optional AI explanation (OpenAI) | ✅ Implemented; failure is ignored and response has no explanation. |
-| Analytics Worker writes mood_history | ⚠️ Worker exists and would write to `mood_history`, but **API Gateway does not enqueue jobs** to the worker’s queue; mood_history stays empty. |
-| Profile “past recommendations” from API | ❌ Not implemented. Past recommendations on profile are from **local storage** only. DB stores them but no endpoint returns them. |
-| Text analyze requires auth | ❌ No; `/mood/analyze/text` has no auth middleware; can be called anonymously. |
-
----
-
 ## 🛠️ Tech Stack
 
 ### Frontend
