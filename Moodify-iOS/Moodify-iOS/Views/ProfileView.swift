@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct ProfileView: View {
+    private static func parseUploadDate(_ s: String) -> Date? {
+        let withFrac = ISO8601DateFormatter()
+        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFrac.date(from: s) ?? ISO8601DateFormatter().date(from: s)
+    }
+
     @StateObject private var viewModel = ProfileViewModel()
     @ObservedObject private var auth = AuthStorage.shared
     @Environment(\.layoutMetrics) private var layout
@@ -171,30 +177,47 @@ struct ProfileView: View {
                     Text("Past recommendations")
                         .font(.headline)
                         .foregroundColor(Color("TextPrimary"))
-                    if viewModel.history.isEmpty {
-                        Text("No past analyses yet.")
+                    if viewModel.uploadsLoading {
+                        Text("Loading…")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextSecondary"))
+                            .padding(layout.spacingM)
+                    } else if viewModel.uploads.isEmpty {
+                        Text("No uploads yet. Your photos and text will appear here.")
                             .font(.subheadline)
                             .foregroundColor(Color("TextSecondary"))
                             .padding(layout.spacingM)
                     } else {
-                        ForEach(viewModel.history) { entry in
-                            HStack(spacing: layout.spacingM) {
-                                Text(entry.emotion)
-                                    .font(.subheadline.weight(.medium))
-                                    .padding(.horizontal, layout.spacingM)
-                                    .padding(.vertical, layout.spacingS)
-                                    .background(Color.moodifyMood(for: entry.emotion).opacity(0.25))
-                                    .clipShape(Capsule())
-                                Text(entry.inputType == "photo" ? "Photo" : "Text")
-                                    .font(.caption)
-                                    .foregroundColor(Color("TextSecondary"))
-                                Spacer()
-                                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(Color("TextSecondary"))
+                        ForEach(viewModel.uploads) { item in
+                            HStack(alignment: .top, spacing: layout.spacingM) {
+                                if item.isImage {
+                                    if let img = viewModel.uploadImages[item.id] {
+                                        Image(uiImage: img)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: layout.scaled(56), height: layout.scaled(56))
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color("Surface"))
+                                            .frame(width: layout.scaled(56), height: layout.scaled(56))
+                                            .overlay(Text("…").font(.caption).foregroundColor(Color("TextSecondary")))
+                                    }
+                                } else {
+                                    Text(item.text_content ?? "—")
+                                        .font(.subheadline)
+                                        .foregroundColor(Color("TextPrimary"))
+                                        .lineLimit(2)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Spacer(minLength: layout.spacingS)
+                                if let date = Self.parseUploadDate(item.created_at) {
+                                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundColor(Color("TextSecondary"))
+                                }
                             }
-                            .padding(.vertical, layout.spacingS)
-                            .padding(.horizontal, layout.spacingM)
+                            .padding(layout.spacingM)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color("Surface"))
@@ -219,7 +242,7 @@ struct ProfileView: View {
             }
         }
         .onAppear {
-            viewModel.loadHistory()
+            viewModel.loadUploads()
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(source: .library, onPick: { img in

@@ -6,6 +6,7 @@ import { errorHandler } from "./middleware/error.middleware";
 import { authRoutes } from "./routes/auth.routes";
 import { usersRoutes } from "./routes/users.routes";
 import { moodRoutes } from "./routes/mood.routes";
+import { uploadsRoutes } from "./routes/uploads.routes";
 import { logger } from "./utils/logger.util";
 
 const app = Fastify({
@@ -26,6 +27,7 @@ app.setErrorHandler(errorHandler);
 app.register(authRoutes);
 app.register(usersRoutes);
 app.register(moodRoutes);
+app.register(uploadsRoutes);
 
 app.get('/health', async () => {
     return { status: 'healthy', service: 'api-gateway' };

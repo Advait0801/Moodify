@@ -136,6 +136,27 @@ final class APIClient {
         let body = try JSONEncoder().encode(Payload(text: text))
         return try await request("/mood/analyze/text", method: "POST", body: body)
     }
+
+    func getUploads() async throws -> [UserUploadItem] {
+        let response: UserUploadsResponse = try await request("/users/me/uploads")
+        return response.uploads
+    }
+
+    func getUploadImage(id: String) async throws -> Data {
+        guard let url = URL(string: baseURL + "/uploads/\(id)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let token = AuthStorage.shared.token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.status(0, "Invalid response") }
+        if http.statusCode == 401 { AuthStorage.shared.clear() }
+        guard http.statusCode == 200 else {
+            throw APIError.status(http.statusCode, "Failed to load image")
+        }
+        return data
+    }
 }
 
 private struct EmptyResponse: Decodable {}

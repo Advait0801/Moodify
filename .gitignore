@@ -110,8 +110,6 @@ next-env.d.ts
 # Note: package-lock.json, yarn.lock should be committed for reproducible builds
 notes
 
-ios/
-
 # iOS / Xcode
 ios/DerivedData/
 ios/build/

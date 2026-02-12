@@ -6,15 +6,9 @@ import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { PasswordInput } from "@/components/ui/password-input";
+import type { UserUploadItem } from "@/lib/types";
 
-const HISTORY_KEY = "moodify_history";
 const MAX_IMAGE_SIZE = 500 * 1024;
-
-interface HistoryEntry {
-  emotion: string;
-  date: string;
-  inputType: "photo" | "text";
-}
 
 function getInitials(user: { email: string; username?: string | null }) {
   const base = user.username?.trim() || user.email.split("@")[0] || "";
@@ -34,26 +28,48 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function ProfilePage() {
   const { user, isLoading, refreshUser } = useAuth();
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [uploads, setUploads] = useState<UserUploadItem[]>([]);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [uploadsLoading, setUploadsLoading] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [pictureLoading, setPictureLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (raw) {
-        const list = JSON.parse(raw) as HistoryEntry[];
-        setHistory([...list].reverse());
-      }
-    } catch {
-      setHistory([]);
-    }
-  }, []);
+    if (!user) return;
+    let cancelled = false;
+    setUploadsLoading(true);
+    api
+      .getUploads()
+      .then(({ uploads: list }) => {
+        if (!cancelled) setUploads(list);
+        const imageIds = list.filter((u) => u.type === "image").map((u) => u.id);
+        imageIds.forEach((id) => {
+          api
+            .getUploadImageBlob(id)
+            .then((blob) => {
+              if (cancelled) return;
+              const url = URL.createObjectURL(blob);
+              blobUrlsRef.current.push(url);
+              setImageUrls((prev) => ({ ...prev, [id]: url }));
+            })
+            .catch(() => {});
+        });
+      })
+      .catch(() => setUploads([]))
+      .finally(() => {
+        if (!cancelled) setUploadsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      blobUrlsRef.current.forEach(URL.revokeObjectURL);
+      blobUrlsRef.current = [];
+    };
+  }, [user]);
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
@@ -247,9 +263,13 @@ export default function ProfilePage() {
       </section>
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-4">Past recommendations</h2>
-        {history.length === 0 ? (
+        {uploadsLoading ? (
           <div className="p-8 rounded-xl bg-surface border border-border text-center">
-            <p className="text-muted text-sm">No past analyses yet.</p>
+            <p className="text-muted text-sm">Loading…</p>
+          </div>
+        ) : uploads.length === 0 ? (
+          <div className="p-8 rounded-xl bg-surface border border-border text-center">
+            <p className="text-muted text-sm">No uploads yet. Your photos and text will appear here.</p>
             <Link
               href="/analyze"
               className="mt-4 inline-block px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
@@ -259,19 +279,35 @@ export default function ProfilePage() {
           </div>
         ) : (
           <ul className="space-y-3">
-            {history.map((entry, i) => (
+            {uploads.map((upload) => (
               <li
-                key={`${entry.date}-${i}`}
-                className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-border"
+                key={upload.id}
+                className="flex items-start gap-4 p-4 rounded-xl bg-surface border border-border"
               >
-                <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-accent/20 text-accent shrink-0">
-                  {entry.emotion}
-                </span>
+                <div className="flex-1 min-w-0 flex items-start gap-3">
+                  {upload.type === "image" ? (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                      {imageUrls[upload.id] ? (
+                        <img
+                          src={imageUrls[upload.id]}
+                          alt="Upload"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted text-xs">
+                          …
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-foreground line-clamp-2">
+                      {upload.text_content ?? "—"}
+                    </p>
+                  )}
+                </div>
                 <span className="text-sm text-muted shrink-0">
-                  {entry.inputType === "photo" ? "Photo upload" : "Text"}
-                </span>
-                <span className="text-sm text-muted ml-auto shrink-0">
-                  {new Date(entry.date).toLocaleDateString()} {new Date(entry.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(upload.created_at).toLocaleDateString()}{" "}
+                  {new Date(upload.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </li>
             ))}

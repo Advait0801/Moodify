@@ -141,4 +141,17 @@ export const api = {
       body: JSON.stringify({ text }),
     });
   },
+
+  async getUploads(): Promise<{ uploads: import("./types").UserUploadItem[] }> {
+    return request("/users/me/uploads");
+  },
+
+  async getUploadImageBlob(id: string): Promise<Blob> {
+    const token = getToken();
+    const res = await fetch(`${BASE_URL}/uploads/${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status === 404 ? "Not found" : `Request failed: ${res.status}`, res.status);
+    return res.blob();
+  },
 };

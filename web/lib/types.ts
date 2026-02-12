@@ -41,3 +41,11 @@ export interface MoodAnalyzeResponse {
     explanation?: string;
   };
 }
+
+export interface UserUploadItem {
+  id: string;
+  type: "image" | "text";
+  content_type: string | null;
+  created_at: string;
+  text_content?: string;
+}

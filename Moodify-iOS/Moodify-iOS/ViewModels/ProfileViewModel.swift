@@ -17,23 +17,33 @@ final class ProfileViewModel: ObservableObject {
     @Published var passwordLoading = false
     @Published var pictureLoading = false
     @Published var errorMessage: String?
-    @Published var history: [HistoryEntry] = []
-    private let historyKey = "moodify_history"
+    @Published var uploads: [UserUploadItem] = []
+    @Published var uploadImages: [String: UIImage] = [:]
+    @Published var uploadsLoading = false
 
     var authStorage: AuthStorage { AuthStorage.shared }
     var api: APIClient { APIClient.shared }
     var user: User? { authStorage.user }
 
-    func loadHistory() {
-        guard let data = UserDefaults.standard.data(forKey: historyKey),
-              let list = try? JSONDecoder().decode([[String: String]].self, from: data) else {
-            history = []
-            return
-        }
-        history = list.reversed().enumerated().compactMap { i, dict in
-            guard let emotion = dict["emotion"], let dateStr = dict["date"], let inputType = dict["inputType"] else { return nil }
-            guard let date = ISO8601DateFormatter().date(from: dateStr) else { return nil }
-            return HistoryEntry(id: "\(i)-\(dateStr)", emotion: emotion, date: date, inputType: inputType)
+    func loadUploads() {
+        guard authStorage.token != nil else { uploads = []; return }
+        uploadsLoading = true
+        Task {
+            defer { uploadsLoading = false }
+            do {
+                let list = try await api.getUploads()
+                uploads = list
+                for item in list where item.isImage {
+                    do {
+                        let data = try await api.getUploadImage(id: item.id)
+                        if let img = UIImage(data: data) {
+                            uploadImages[item.id] = img
+                        }
+                    } catch {}
+                }
+            } catch {
+                uploads = []
+            }
         }
     }
 
