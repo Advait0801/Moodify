@@ -88,44 +88,55 @@ class SpotifyClient {
             throw new Error('Spotify search failed');
         }
     }
-    async getRecommendations(
-        seedGenres: string[],
-        targetEnergy: number,
-        targetValence: number,
-        targetDanceability: number,
+    /**
+     * Get tracks by searching Spotify by genre(s).
+     * Replaces the deprecated Get Recommendations endpoint (returns 404 for new/dev apps).
+     * Search limit per request is 10 (Feb 2026); we run multiple searches and merge to reach requested limit.
+     */
+    async getTracksByGenreSearch(
+        genres: string[],
         limit: number = 20
     ): Promise<SpotifyTrack[]> {
-        try {
-            const token = await this.getAccessToken();
-            const response = await this.client.get<{ tracks: SpotifyTrack[] }>(
-                '/recommendations',
-                {
-                    params: {
-                        seed_genres: seedGenres.slice(0, 5).join(','),
-                        target_energy: targetEnergy,
-                        target_valence: targetValence,
-                        target_danceability: targetDanceability,
-                        limit,
-                        market: 'US',
-                    },
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+        const token = await this.getAccessToken();
+        const seenIds = new Set<string>();
+        const tracks: SpotifyTrack[] = [];
+        const genresToUse = genres.slice(0, 5);
+        const perRequestLimit = 10;
 
-            return response.data.tracks;
-        } catch (error: any) {
-            const status = error.response?.status;
-            const body = error.response?.data;
-            logger.error(
-                'Spotify recommendations error:',
-                error.message,
-                status ? ` status=${status}` : '',
-                body ? ` body=${JSON.stringify(body)}` : ''
-            );
-            throw new Error('Spotify recommendations failed');
+        for (const genre of genresToUse) {
+            if (tracks.length >= limit) break;
+            try {
+                const response = await this.client.get<SpotifySearchResponse>(
+                    '/search',
+                    {
+                        params: {
+                            q: `genre:${genre}`,
+                            type: 'track',
+                            limit: perRequestLimit,
+                            market: 'US',
+                        },
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                );
+                const items = response.data.tracks?.items ?? [];
+                for (const track of items) {
+                    if (!seenIds.has(track.id)) {
+                        seenIds.add(track.id);
+                        tracks.push(track);
+                        if (tracks.length >= limit) break;
+                    }
+                }
+            } catch (error: any) {
+                logger.warn(`Spotify search for genre "${genre}" failed:`, error.message);
+            }
         }
+
+        if (tracks.length === 0) {
+            throw new Error('Spotify search failed to return any tracks');
+        }
+        return tracks;
     }
 }
 

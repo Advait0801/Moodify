@@ -70,11 +70,8 @@ export const recommendationService = {
         }
         
         try {
-            const spotifyTracks = await spotifyClient.getRecommendations(
+            const spotifyTracks = await spotifyClient.getTracksByGenreSearch(
                 mapping.genres,
-                mapping.energy,
-                mapping.valence,
-                mapping.danceability,
                 20
             );
 
