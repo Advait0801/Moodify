@@ -5,15 +5,17 @@ export interface EmotionMapping {
     danceability: number;
 }
 
+// Only use Spotify accepted genre seeds (see GET /recommendations/available-genre-seeds).
+// Avoid "happy", "sad", "dark", "soundtrack" etc. which can cause 404.
 export const emotionMapper = {
     happy: {
-        genres: ['pop', 'dance', 'electronic', 'happy'],
+        genres: ['pop', 'dance', 'electronic'],
         energy: 0.8,
         valence: 0.9,
         danceability: 0.8,
     },
     sad: {
-        genres: ['sad', 'acoustic', 'indie', 'blues'],
+        genres: ['acoustic', 'indie', 'blues', 'singer-songwriter'],
         energy: 0.3,
         valence: 0.2,
         danceability: 0.3,
@@ -25,19 +27,19 @@ export const emotionMapper = {
         danceability: 0.5,
     },
     fear: {
-        genres: ['ambient', 'dark', 'electronic', 'soundtrack'],
+        genres: ['ambient', 'electronic', 'soundtracks', 'classical'],
         energy: 0.4,
         valence: 0.3,
         danceability: 0.3,
     },
     surprise: {
-        genres: ['pop', 'electronic', 'indie-pop'],
+        genres: ['pop', 'electronic', 'indie', 'alt-rock'],
         energy: 0.7,
         valence: 0.7,
         danceability: 0.7,
     },
     disgust: {
-        genres: ['alternative', 'indie', 'experimental'],
+        genres: ['alternative', 'indie', 'rock', 'punk'],
         energy: 0.5,
         valence: 0.4,
         danceability: 0.4,

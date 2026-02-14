@@ -106,6 +106,7 @@ class SpotifyClient {
                         target_valence: targetValence,
                         target_danceability: targetDanceability,
                         limit,
+                        market: 'US',
                     },
                     headers: {
                         Authorization: `Bearer ${token}`,
