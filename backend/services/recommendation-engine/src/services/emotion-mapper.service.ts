@@ -27,13 +27,13 @@ export const emotionMapper = {
         danceability: 0.5,
     },
     fear: {
-        genres: ['ambient', 'electronic', 'soundtracks', 'classical'],
+        genres: ['ambient', 'electronic', 'classical'],
         energy: 0.4,
         valence: 0.3,
         danceability: 0.3,
     },
     surprise: {
-        genres: ['pop', 'electronic', 'indie', 'alt-rock'],
+        genres: ['pop', 'electronic', 'indie'],
         energy: 0.7,
         valence: 0.7,
         danceability: 0.7,

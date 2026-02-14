@@ -116,7 +116,14 @@ class SpotifyClient {
 
             return response.data.tracks;
         } catch (error: any) {
-            logger.error('Spotify recommendations error:', error.message);
+            const status = error.response?.status;
+            const body = error.response?.data;
+            logger.error(
+                'Spotify recommendations error:',
+                error.message,
+                status ? ` status=${status}` : '',
+                body ? ` body=${JSON.stringify(body)}` : ''
+            );
             throw new Error('Spotify recommendations failed');
         }
     }
