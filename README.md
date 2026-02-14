@@ -26,7 +26,7 @@
 ### Key Highlights
 
 - 🎭 **Dual Input Modes**: Photo-based face emotion detection (ONNX) or text-based emotion (OpenAI)
-- 🎵 **Spotify Integration**: OAuth 2.0, playlist creation, track recommendations with preview URLs
+- 🎵 **Spotify Integration**: Client credentials; track recommendations via **Search API** (by genre) with preview URLs; fallback to curated playlists if needed
 - 🔐 **Secure Auth**: JWT authentication with bcrypt password hashing, optional username and profile picture
 - 🐳 **Dockerized Backend**: API Gateway, Mood Detection (Python), Recommendation Engine, Analytics Worker, Redis, PostgreSQL
 - 🎨 **Web & iOS**: Next.js App Router (Tailwind, light/dark, camera/audio) and native iOS app (Swift/SwiftUI) sharing the same APIs
@@ -42,16 +42,16 @@
 - **Photo Mood Analysis**: Upload or capture a photo → face detection → emotion classification (ONNX) → emotion-to-mood mapping → Spotify recommendations
 - **Text Mood Analysis**: Enter how you feel in text → OpenAI text-to-emotion → Spotify recommendations
 - **User Accounts**: Register (email, optional username, password), login (email or username), profile with avatar and password change
-- **Recommendations**: Tracks with preview URLs, optional Spotify playlist, optional AI-generated explanation (OpenAI)
+- **Recommendations**: Tracks from Spotify (Search by genre) or curated fallback; preview URLs; optional AI-generated explanation (OpenAI)
 - **YouTube Previews**: Optional YouTube video IDs for tracks (YouTube Data API)
 
 ### Backend & Data
 
 - **API Gateway**: REST APIs, JWT auth, orchestration to mood-detection and recommendation-engine, mood smoothing, Redis for async jobs
 - **Mood Detection**: FastAPI service; image preprocessing, ONNX inference, confidence scores; no auth/DB/Spotify
-- **Recommendation Engine**: Emotion→mood mapping, Spotify API (search, create playlist), OpenAI explanations, fallback logic
+- **Recommendation Engine**: Emotion→genre mapping, Spotify **Search API** (tracks by genre; Recommendations endpoint deprecated), OpenAI explanations, curated fallback
 - **Analytics Worker**: Consumes Redis queue, writes mood history to PostgreSQL (eventually consistent)
-- **PostgreSQL**: Users, recommendations, mood_history; migrations (001–003) for schema
+- **PostgreSQL**: Users, recommendations, mood_history, user_uploads; migrations (001–004) for schema
 
 ### User Experience
 
@@ -139,12 +139,12 @@
 
 - **Input**: Emotion, confidence, userId, optional emotion probabilities.
 - **Low confidence**: If confidence is below a threshold (e.g. 0.4), the engine **forces neutral** mood and uses neutral recommendations (no error).
-- **Emotion mapping**: Maps emotion (e.g. happy, sad, angry) to Spotify-style params (genres, energy, valence, danceability). Can **blend** from probabilities for richer mapping.
-- **Spotify path**:
+- **Emotion mapping**: Maps emotion (e.g. happy, sad, angry) to **genres** (and energy/valence/danceability for blending). Genres are chosen from Spotify's accepted seed set.
+- **Spotify path** (primary):
   - Gets an access token via **client_credentials** (server-side; no user Spotify login).
-  - Calls Spotify **Recommendations API** with seed genres and target audio features.
+  - Uses Spotify **Search API** (by genre) to fetch tracks, since the **Recommendations API** is deprecated and returns 404 for new/dev apps. Multiple genre searches are merged and deduped to return up to ~20 tracks.
   - If **Spotify fails** (no token, rate limit, API error): catches error and falls back (see below).
-  - If Spotify succeeds: returns tracks with `preview_url` (Spotify 30s preview). **No playlist is created on Spotify**; we only get track recommendations. Optionally calls **OpenAI** for a short explanation; if OpenAI fails, explanation is omitted (no error).
+  - If Spotify succeeds: returns tracks with `preview_url` (Spotify 30s preview). **No playlist is created on Spotify**; we only return track recommendations. Optionally calls **OpenAI** for a short explanation; if OpenAI fails, explanation is omitted (no error).
 - **Fallback path** (when Spotify fails or is not configured):
   - Uses **curated playlists** (hardcoded tracks per emotion). For each track, optionally calls **YouTube Data API** to get a video ID; if no API key or YouTube fails, `youtube_video_id` is just missing (track still returned with a search URL).
   - If **both Spotify and fallback** fail → Recommendation Engine throws → client gets 500.
@@ -159,7 +159,7 @@
 ### 5. What is *not* wired end-to-end
 
 - **Mood history for analytics**: The **Analytics Worker** is built to consume a Redis queue and insert into `mood_history`. The **API Gateway never pushes jobs to that queue**; it only uses Redis for mood smoothing. So `mood_history` is not populated by the current flow.
-- **Spotify playlist creation**: README mentions “playlist creation”; we only **recommend** tracks. We do not create a playlist on the user’s Spotify account (that would require user OAuth).
+- **Spotify playlist creation**: We only **recommend** tracks (via Search or fallback). We do not create a playlist on the user's Spotify account (that would require user OAuth).
 - **Profile “past recommendations”**: Stored in DB by the Recommendation Engine, but the API does not expose “my past recommendations”; the profile screen uses **local storage** only.
 
 ---
@@ -195,9 +195,14 @@
 
 ### AWS Deployment (Summary)
 
-- **Backend**: EC2 + RDS (PostgreSQL) + Redis on EC2; `docker-compose.aws.yml`; CloudFront in front of EC2:3002 (HTTPS); RDS SSL handled in Node (see `notes`)
-- **Frontend**: Amplify, branch connected to repo, root `web`, env `NEXT_PUBLIC_API_URL` = CloudFront URL
-- **Updates**: Push code → EC2 `git pull`, rebuild images (`docker build --no-cache`), `docker-compose -f docker-compose.aws.yml up -d`
+- **Backend**: EC2 + RDS (PostgreSQL) + Redis on EC2; `docker-compose.aws.yml`; CloudFront in front of EC2 (origin = EC2 public DNS, port 3002, HTTPS); RDS SSL handled in Node.
+- **Frontend**: Amplify, branch connected to repo, build from `web`; env `NEXT_PUBLIC_API_URL` = CloudFront URL (e.g. `https://d14rr2aqdwi0dp.cloudfront.net`).
+- **Env (backend)**:
+  - **API Gateway / Compose**: `backend/.env` (or export) with `DATABASE_URL`, `JWT_SECRET`.
+  - **Recommendation Engine**: `backend/services/recommendation-engine/.env` with `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI` (e.g. Amplify app URL `/auth/callback`). Optional: `OPENAI_API_KEY`, `YOUTUBE_API_KEY`.
+- **Spotify**: Create an app in [Spotify Developer Dashboard](https://developer.spotify.com/dashboard); add a Redirect URI (e.g. your Amplify URL). Backend uses **client credentials** and **Search API** (by genre), not the deprecated Recommendations API.
+- **Migrations**: Run `001_initial_schema.sql` through `004_user_uploads.sql` against RDS (e.g. via Docker: `postgres:15-alpine` or `postgres:16-alpine` with `psql` and connection URI including `?sslmode=require`).
+- **Updates**: Push code → EC2 `git pull`, rebuild images (`docker build --no-cache` per service), `docker-compose -f docker-compose.aws.yml up -d`
 
 ---
 
@@ -216,7 +221,7 @@
 
 ## 🙏 Acknowledgments
 
-- **Spotify** for the Web API and OAuth
+- **Spotify** for the Web API (Search and client credentials; Recommendations endpoint is deprecated for new apps)
 - **OpenAI** for text-to-emotion and explanations
 - **ONNX** and the open-source emotion model used for face-based mood detection
 
