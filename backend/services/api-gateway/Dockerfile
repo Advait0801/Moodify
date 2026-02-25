@@ -26,7 +26,7 @@ RUN npm prune --production && \
     ls -la dist/ && \
     test -f dist/app.js || (echo "ERROR: dist/app.js removed after prune" && exit 1)
 
-# Expose port
+# Expose port (match config default; override with PORT env in compose)
 EXPOSE 3000
 
 # Start server

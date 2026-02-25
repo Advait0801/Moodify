@@ -51,4 +51,16 @@ export const usersController = {
             throw error;
         }
     },
+
+    async getSpotifyStatus(
+        request: AuthenticatedRequest,
+        reply: FastifyReply
+    ) {
+        try {
+            const status = await usersService.getSpotifyStatus(request.user!.userId);
+            return reply.status(200).send(status);
+        } catch (error: any) {
+            throw error;
+        }
+    },
 }

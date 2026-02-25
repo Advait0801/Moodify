@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import AuthenticationServices
+import UIKit
 internal import Combine
 
 @MainActor
@@ -19,6 +21,49 @@ final class AuthViewModel: ObservableObject {
 
     var authStorage: AuthStorage { AuthStorage.shared }
     var api: APIClient { APIClient.shared }
+
+    func loginWithSpotify() async {
+        guard let authURL = URL(string: APIClient.shared.baseURL + "/auth/spotify?intent=login&returnTo=app") else {
+            errorMessage = "Invalid URL"
+            return
+        }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                let provider = SpotifyAuthContextProvider()
+                let session = ASWebAuthenticationSession(
+                    url: authURL,
+                    callbackURLScheme: "moodify"
+                ) { url, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let url = url else {
+                        continuation.resume(throwing: APIError.invalidURL)
+                        return
+                    }
+                    continuation.resume(returning: url)
+                }
+                session.prefersEphemeralWebBrowserSession = false
+                session.presentationContextProvider = provider
+                session.start()
+            }
+            guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+                  let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
+                errorMessage = "Could not complete Spotify sign in."
+                return
+            }
+            let user = try await api.getProfile(token: token)
+            authStorage.set(auth: AuthResponse(user: user, token: token, expiresIn: "7d"))
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            // User cancelled
+        } catch {
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
+    }
 
     func login() async {
         guard !email.trimmingCharacters(in: .whitespaces).isEmpty, !password.isEmpty else {

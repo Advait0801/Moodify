@@ -37,5 +37,6 @@ export const config = {
         frontendSuccessUrl: process.env.FRONTEND_SUCCESS_URL || 'http://localhost:3002',
         frontendLoginSuccessPath: process.env.FRONTEND_LOGIN_SUCCESS_PATH || '/auth/callback',
         frontendConnectSuccessPath: process.env.FRONTEND_CONNECT_SUCCESS_PATH || '/dashboard',
+        appScheme: process.env.MOODIFY_APP_SCHEME || 'moodify',
     },
 };

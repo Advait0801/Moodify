@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct ProfileView: View {
     private static func parseUploadDate(_ s: String) -> Date? {
@@ -84,6 +85,63 @@ struct ProfileView: View {
                             .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
                     )
                 }
+
+                VStack(alignment: .leading, spacing: layout.spacingM) {
+                    Text("Spotify")
+                        .font(.headline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Text("Link your Spotify account for personalized playlists.")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                    if viewModel.spotifyConnected == true {
+                        HStack(spacing: layout.spacingS) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(Color(red: 29/255, green: 185/255, blue: 84/255))
+                            Text("Connected")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(Color(red: 29/255, green: 185/255, blue: 84/255))
+                        }
+                        .padding(.vertical, layout.spacingS)
+                    } else if viewModel.spotifyConnected == false {
+                        Button {
+                            Task { await viewModel.connectSpotify() }
+                        } label: {
+                            HStack(spacing: layout.spacingS) {
+                                if viewModel.spotifyConnectLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .tint(Color(red: 29/255, green: 185/255, blue: 84/255))
+                                } else {
+                                    Image(systemName: "music.note")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                Text(viewModel.spotifyConnectLoading ? "Opening…" : "Connect Spotify")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, layout.spacingM)
+                            .background(Color(red: 29/255, green: 185/255, blue: 84/255).opacity(0.15))
+                            .foregroundColor(Color(red: 29/255, green: 185/255, blue: 84/255))
+                        }
+                        .buttonStyle(.plain)
+                        .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.cardCorner)
+                                .stroke(Color(red: 29/255, green: 185/255, blue: 84/255).opacity(0.4), lineWidth: 1)
+                        )
+                        .disabled(viewModel.spotifyConnectLoading)
+                    } else {
+                        Text("Loading…")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+                .padding(layout.cardPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: layout.cardCorner)
+                        .fill(Color("Surface"))
+                        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                )
 
                 VStack(alignment: .leading, spacing: layout.spacingM) {
                     Text("Change password")
@@ -243,6 +301,10 @@ struct ProfileView: View {
         }
         .onAppear {
             viewModel.loadUploads()
+            viewModel.loadSpotifyStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .spotifyConnectCompleted)) { _ in
+            viewModel.loadSpotifyStatus()
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(source: .library, onPick: { img in

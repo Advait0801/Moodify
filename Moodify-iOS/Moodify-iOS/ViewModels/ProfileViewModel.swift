@@ -6,8 +6,9 @@
 //
 
 import Foundation
-internal import Combine
+import AuthenticationServices
 import UIKit
+internal import Combine
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
@@ -20,6 +21,8 @@ final class ProfileViewModel: ObservableObject {
     @Published var uploads: [UserUploadItem] = []
     @Published var uploadImages: [String: UIImage] = [:]
     @Published var uploadsLoading = false
+    @Published var spotifyConnected: Bool? = nil
+    @Published var spotifyConnectLoading = false
 
     var authStorage: AuthStorage { AuthStorage.shared }
     var api: APIClient { APIClient.shared }
@@ -94,5 +97,44 @@ final class ProfileViewModel: ObservableObject {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    func loadSpotifyStatus() {
+        guard authStorage.token != nil else { spotifyConnected = false; return }
+        Task {
+            do {
+                let status = try await api.getSpotifyStatus()
+                spotifyConnected = status.connected
+            } catch {
+                spotifyConnected = false
+            }
+        }
+    }
+
+    func connectSpotify() async {
+        spotifyConnectLoading = true
+        errorMessage = nil
+        do {
+            let response = try await api.getSpotifyConnectUrl(returnToApp: true)
+            guard let url = URL(string: response.url) else {
+                spotifyConnectLoading = false
+                return
+            }
+            let provider = SpotifyAuthContextProvider()
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: "moodify"
+            ) { [weak self] _, _ in
+                Task { @MainActor in
+                    self?.spotifyConnectLoading = false
+                    self?.loadSpotifyStatus()
+                }
+            }
+            session.presentationContextProvider = provider
+            session.start()
+        } catch {
+            spotifyConnectLoading = false
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
     }
 }

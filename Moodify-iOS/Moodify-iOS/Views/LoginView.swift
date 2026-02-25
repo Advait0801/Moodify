@@ -74,6 +74,36 @@ struct LoginView: View {
                 .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
                 .scaleEffect(viewModel.isLoading ? 0.98 : 1)
                 .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+
+                HStack {
+                    Rectangle().fill(Color("Divider")).frame(height: 1)
+                    Text("or").font(.caption).foregroundColor(Color("TextSecondary"))
+                    Rectangle().fill(Color("Divider")).frame(height: 1)
+                }
+                .padding(.vertical, layout.spacingS)
+
+                Button {
+                    Task { await viewModel.loginWithSpotify() }
+                } label: {
+                    HStack(spacing: layout.spacingS) {
+                        Image(systemName: "music.note")
+                            .font(.body.weight(.medium))
+                        Text("Sign in with Spotify")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, layout.spacingM)
+                    .background(Color(red: 29/255, green: 185/255, blue: 84/255).opacity(0.15))
+                    .foregroundColor(Color(red: 29/255, green: 185/255, blue: 84/255))
+                }
+                .buttonStyle(.plain)
+                .clipShape(RoundedRectangle(cornerRadius: layout.cardCorner))
+                .overlay(
+                    RoundedRectangle(cornerRadius: layout.cardCorner)
+                        .stroke(Color(red: 29/255, green: 185/255, blue: 84/255).opacity(0.4), lineWidth: 1)
+                )
+                .disabled(viewModel.isLoading)
+
                 NavigationLink("Create account") {
                     RegisterView()
                 }

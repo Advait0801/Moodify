@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { userRepository } from "../repositories/user.repository";
+import { spotifyOauthRepository } from "../repositories/spotify_oauth.repository";
 import { logger } from "../utils/logger.util";
 
 const MAX_PROFILE_PICTURE_LENGTH = 600000;
@@ -41,5 +42,10 @@ export const usersService = {
         }
         await userRepository.updateProfilePicture(userId, profilePicture);
         logger.info(`Profile picture updated for user ${userId}`);
+    },
+
+    async getSpotifyStatus(userId: string): Promise<{ connected: boolean }> {
+        const row = await spotifyOauthRepository.findByUserId(userId);
+        return { connected: !!row };
     },
 };

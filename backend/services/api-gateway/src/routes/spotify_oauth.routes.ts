@@ -16,4 +16,8 @@ export async function spotifyOauthRoutes(fastify: FastifyInstance) {
     }, spotifyOauthController.redirectToSpotify);
 
     fastify.get('/auth/spotify/callback', spotifyOauthController.callback);
+
+    fastify.get('/auth/spotify/connect-url', {
+        preHandler: [authMiddleware],
+    }, spotifyOauthController.getConnectUrl);
 }

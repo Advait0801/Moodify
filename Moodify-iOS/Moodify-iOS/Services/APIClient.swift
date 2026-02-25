@@ -25,7 +25,7 @@ enum APIError: LocalizedError {
 
 final class APIClient {
     static let shared = APIClient()
-    var baseURL: String = "https://dnzceqc6uohqj.cloudfront.net"
+    var baseURL: String = "https://d14rr2aqdwi0dp.cloudfront.net"
     private let session: URLSession
 
     private init(session: URLSession = .shared) {
@@ -82,8 +82,18 @@ final class APIClient {
         return try await request("/auth/register", method: "POST", body: body, token: nil)
     }
 
-    func getProfile() async throws -> User {
-        return try await request("/users/me", token: AuthStorage.shared.token)
+    func getProfile(token: String? = nil) async throws -> User {
+        return try await request("/users/me", token: token ?? AuthStorage.shared.token)
+    }
+
+    func getSpotifyConnectUrl(returnToApp: Bool = false) async throws -> SpotifyConnectUrlResponse {
+        var path = "/auth/spotify/connect-url"
+        if returnToApp { path += "?returnTo=app" }
+        return try await request(path)
+    }
+
+    func getSpotifyStatus() async throws -> SpotifyStatusResponse {
+        return try await request("/users/me/spotify-status")
     }
 
     func updateProfile(profilePicture: String?) async throws -> User {
@@ -160,3 +170,11 @@ final class APIClient {
 }
 
 private struct EmptyResponse: Decodable {}
+
+struct SpotifyConnectUrlResponse: Decodable {
+    let url: String
+}
+
+struct SpotifyStatusResponse: Decodable {
+    let connected: Bool
+}

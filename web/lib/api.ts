@@ -6,7 +6,8 @@ import type {
 } from "./types";
 import { getToken, clearAuth } from "./auth-storage";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const BASE_URL = API_BASE_URL;
 
 export class ApiError extends Error {
   constructor(
@@ -144,6 +145,14 @@ export const api = {
 
   async getUploads(): Promise<{ uploads: import("./types").UserUploadItem[] }> {
     return request("/users/me/uploads");
+  },
+
+  async getSpotifyConnectUrl(): Promise<{ url: string }> {
+    return request("/auth/spotify/connect-url");
+  },
+
+  async getSpotifyStatus(): Promise<{ connected: boolean }> {
+    return request("/users/me/spotify-status");
   },
 
   async getUploadImageBlob(id: string): Promise<Blob> {

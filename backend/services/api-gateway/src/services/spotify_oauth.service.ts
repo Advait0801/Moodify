@@ -14,6 +14,7 @@ export type SpotifyStateIntent = 'login' | 'connect';
 export interface SpotifyStatePayload {
     intent: SpotifyStateIntent;
     userId?: string;
+    returnTo?: 'app';
     iat: number;
 }
 
@@ -32,9 +33,13 @@ export interface SpotifyUserProfile {
 }
 
 export const spotifyOauthService = {
-    buildAuthorizeUrl(statePayload: SpotifyStatePayload): string {
+    buildAuthorizeUrl(statePayload: Omit<SpotifyStatePayload, 'iat'>): string {
+        const payload: SpotifyStatePayload = {
+            ...statePayload,
+            iat: Math.floor(Date.now() / 1000),
+        };
         const state = jwt.sign(
-            statePayload,
+            payload,
             config.jwt.secret,
             { expiresIn: '600s' }
         );
@@ -126,6 +131,11 @@ export const spotifyOauthService = {
                 expiresAt
             );
             await userRepository.updateSpotifyUserId(statePayload.userId!, profile.id);
+            if (statePayload.returnTo === 'app') {
+                const scheme = config.spotify.appScheme.replace(/:\/?\/?$/, '');
+                const redirectUrl = `${scheme}://auth/callback?spotify=connected`;
+                return { intent: 'connect', redirectUrl };
+            }
             const base = config.spotify.frontendSuccessUrl.replace(/\/$/, '');
             const path = config.spotify.frontendConnectSuccessPath.replace(/^\//, '');
             const redirectUrl = `${base}/${path}?spotify=connected`;
@@ -162,6 +172,11 @@ export const spotifyOauthService = {
             );
             const payload: JWTPayload = { userId: user.id, email: user.email };
             const token = jwtUtil.sign(payload);
+            if (statePayload.returnTo === 'app') {
+                const scheme = config.spotify.appScheme.replace(/:\/?\/?$/, '');
+                const redirectUrl = `${scheme}://auth/callback?token=${encodeURIComponent(token)}`;
+                return { intent: 'login', redirectUrl, token, user: { id: user.id, email: user.email, username: user.username } };
+            }
             const base = config.spotify.frontendSuccessUrl.replace(/\/$/, '');
             const path = config.spotify.frontendLoginSuccessPath.replace(/^\//, '');
             const redirectUrl = `${base}/${path}?token=${encodeURIComponent(token)}`;

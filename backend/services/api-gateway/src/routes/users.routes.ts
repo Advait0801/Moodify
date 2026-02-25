@@ -12,4 +12,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
     fastify.post('/users/me/password', {
         preHandler: [authMiddleware],
     }, usersController.changePassword);
+    fastify.get('/users/me/spotify-status', {
+        preHandler: [authMiddleware],
+    }, usersController.getSpotifyStatus);
 }
