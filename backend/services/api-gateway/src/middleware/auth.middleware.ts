@@ -1,6 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { jwtUtil } from "../utils/jwt.util";
-import { error } from "node:console";
 
 export interface AuthenticatedRequest extends FastifyRequest {
     user?: {

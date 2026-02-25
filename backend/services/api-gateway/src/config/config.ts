@@ -28,4 +28,14 @@ export const config = {
     moodSmoothing: {
         windowSize: parseInt(process.env.MOOD_SMOOTHING_WINDOW_SIZE || '3', 10),
     },
+
+    spotify: {
+        clientId: process.env.SPOTIFY_CLIENT_ID || '',
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+        redirectUri: process.env.SPOTIFY_REDIRECT_URI || '',
+        scopes: (process.env.SPOTIFY_SCOPES || 'user-read-email user-read-private playlist-modify-public playlist-modify-private').split(' '),
+        frontendSuccessUrl: process.env.FRONTEND_SUCCESS_URL || 'http://localhost:3002',
+        frontendLoginSuccessPath: process.env.FRONTEND_LOGIN_SUCCESS_PATH || '/auth/callback',
+        frontendConnectSuccessPath: process.env.FRONTEND_CONNECT_SUCCESS_PATH || '/dashboard',
+    },
 };

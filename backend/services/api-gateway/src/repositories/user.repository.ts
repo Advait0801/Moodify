@@ -22,6 +22,7 @@ export interface User {
     username: string | null;
     password_hash: string;
     profile_picture: string | null;
+    spotify_user_id: string | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -77,6 +78,35 @@ export const userRepository = {
         await pool.query(
             'UPDATE users SET profile_picture = $1, updated_at = NOW() WHERE id = $2',
             [profilePicture, userId]
+        );
+    },
+
+    async findBySpotifyUserId(spotifyUserId: string): Promise<User | null> {
+        const result = await pool.query(
+            'SELECT * FROM users WHERE spotify_user_id = $1',
+            [spotifyUserId]
+        );
+        return result.rows[0] || null;
+    },
+
+    async createWithSpotify(
+        email: string,
+        username: string,
+        passwordHash: string,
+        spotifyUserId: string
+    ): Promise<User> {
+        const result = await pool.query(
+            `INSERT INTO users (email, username, password_hash, spotify_user_id, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *`,
+            [email, username, passwordHash, spotifyUserId]
+        );
+        return result.rows[0];
+    },
+
+    async updateSpotifyUserId(userId: string, spotifyUserId: string): Promise<void> {
+        await pool.query(
+            'UPDATE users SET spotify_user_id = $1, updated_at = NOW() WHERE id = $2',
+            [spotifyUserId, userId]
         );
     },
 };
