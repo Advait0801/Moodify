@@ -5,12 +5,11 @@ import { authMiddleware } from '../middleware/auth.middleware';
 export async function spotifyOauthRoutes(fastify: FastifyInstance) {
     fastify.get('/auth/spotify', {
         preHandler: [
-            async (request, reply, done) => {
+            async (request, reply) => {
                 const intent = (request as any).query?.intent;
                 if (intent === 'connect') {
                     return authMiddleware(request as any, reply);
                 }
-                done();
             },
         ],
     }, spotifyOauthController.redirectToSpotify);
