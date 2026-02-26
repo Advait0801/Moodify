@@ -5,14 +5,10 @@ import { config } from '../config/config';
 import { logger } from '../utils/logger.util';
 
 export const spotifyOauthController = {
-    async redirectToSpotify(
-        request: FastifyRequest<{
-            Querystring: { intent?: string };
-        }>,
-        reply: FastifyReply
-    ) {
+    async redirectToSpotify(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const intent = (request.query.intent || 'login') as SpotifyStateIntent;
+            const query = request.query as { intent?: string; returnTo?: string };
+            const intent = (query.intent || 'login') as SpotifyStateIntent;
             if (intent !== 'login' && intent !== 'connect') {
                 return reply.status(400).send({ error: 'Invalid intent' });
             }
@@ -29,7 +25,7 @@ export const spotifyOauthController = {
                 return reply.status(302).redirect(url);
             }
 
-            const returnTo = (request as FastifyRequest<{ Querystring: { returnTo?: string } }>).query?.returnTo;
+            const returnTo = query.returnTo;
             const url = spotifyOauthService.buildAuthorizeUrl({
                 intent: 'login',
                 ...(returnTo === 'app' && { returnTo: 'app' as const }),
@@ -41,14 +37,12 @@ export const spotifyOauthController = {
         }
     },
 
-    async getConnectUrl(
-        request: FastifyRequest<{ Querystring: { returnTo?: string } }> & { user?: { userId: string } },
-        reply: FastifyReply
-    ) {
+    async getConnectUrl(request: FastifyRequest, reply: FastifyReply) {
         try {
             const userId = (request as AuthenticatedRequest).user?.userId;
             if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
-            const returnTo = request.query?.returnTo;
+            const query = request.query as { returnTo?: string };
+            const returnTo = query.returnTo;
             const url = spotifyOauthService.buildAuthorizeUrl({
                 intent: 'connect',
                 userId,
@@ -61,20 +55,16 @@ export const spotifyOauthController = {
         }
     },
 
-    async callback(
-        request: FastifyRequest<{
-            Querystring: { code?: string; state?: string; error?: string };
-        }>,
-        reply: FastifyReply
-    ) {
+    async callback(request: FastifyRequest, reply: FastifyReply) {
         try {
-            if (request.query.error) {
-                logger.warn('Spotify OAuth error from provider:', request.query.error);
+            const query = request.query as { code?: string; state?: string; error?: string };
+            if (query.error) {
+                logger.warn('Spotify OAuth error from provider:', query.error);
                 const base = config.spotify.frontendSuccessUrl.replace(/\/$/, '');
                 return reply.status(302).redirect(`${base}/?spotify=error`);
             }
-            const code = request.query.code;
-            const state = request.query.state;
+            const code = query.code;
+            const state = query.state;
             if (!code || !state) {
                 return reply.status(400).send({ error: 'Missing code or state' });
             }
