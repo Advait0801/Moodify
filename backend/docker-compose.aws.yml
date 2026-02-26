@@ -47,6 +47,10 @@ services:
       - PORT=3002
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+      - FRONTEND_SUCCESS_URL=${FRONTEND_SUCCESS_URL}
       - MOOD_DETECTION_SERVICE_URL=http://mood-detection:8001
       - RECOMMENDATION_SERVICE_URL=http://recommendation-engine:3001
       - REDIS_URL=redis://redis:6379
@@ -68,12 +72,16 @@ services:
     container_name: moodify-recommendation-engine
     ports:
       - "3011:3001"
-    env_file:
-      - ./services/recommendation-engine/.env
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=${DATABASE_URL}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.4}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
     depends_on: []
 
