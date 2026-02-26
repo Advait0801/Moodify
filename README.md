@@ -8,7 +8,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20-green.svg)](https://nodejs.org)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://www.docker.com)
 [![ONNX](https://img.shields.io/badge/ONNX-Inference-orange.svg)](https://onnx.ai)
@@ -26,11 +26,11 @@
 ### Key Highlights
 
 - 🎭 **Dual Input Modes**: Photo-based face emotion detection (ONNX) or text-based emotion (OpenAI)
-- 🎵 **Spotify Integration**: Client credentials; track recommendations via **Search API** (by genre) with preview URLs; fallback to curated playlists if needed
+- 🎵 **Spotify Integration**: User OAuth (connect/link account); track recommendations via **Search API** (by genre) with preview URLs; fallback to curated playlists if needed
 - 🔐 **Secure Auth**: JWT authentication with bcrypt password hashing, optional username and profile picture
-- 🐳 **Dockerized Backend**: API Gateway, Mood Detection (Python), Recommendation Engine, Analytics Worker, Redis, PostgreSQL
+- 🐳 **Dockerized Backend**: API Gateway, Mood Detection (Python), Recommendation Engine, Redis, PostgreSQL
 - 🎨 **Web & iOS**: Next.js App Router (Tailwind, light/dark, camera/audio) and native iOS app (Swift/SwiftUI) sharing the same APIs
-- 📊 **Mood History**: Async analytics worker persists mood history; profile shows past recommendations
+- 📊 **Mood smoothing**: Redis stores recent moods per user for smoothing; profile shows past recommendations (from local storage / recommendations table)
 - ☁️ **AWS-Ready**: Deploy backend on EC2 + RDS + CloudFront, frontend on Amplify (HTTPS)
 
 ---
@@ -50,8 +50,7 @@
 - **API Gateway**: REST APIs, JWT auth, orchestration to mood-detection and recommendation-engine, mood smoothing, Redis for async jobs
 - **Mood Detection**: FastAPI service; image preprocessing, ONNX inference, confidence scores; no auth/DB/Spotify
 - **Recommendation Engine**: Emotion→genre mapping, Spotify **Search API** (tracks by genre; Recommendations endpoint deprecated), OpenAI explanations, curated fallback
-- **Analytics Worker**: Consumes Redis queue, writes mood history to PostgreSQL (eventually consistent)
-- **PostgreSQL**: Users, recommendations, mood_history, user_uploads; migrations (001–004) for schema
+- **PostgreSQL**: Users, recommendations, mood_history, user_uploads, spotify_tokens; migrations (001–005) for schema
 
 ### User Experience
 
@@ -90,14 +89,15 @@
                     ▼                 ▼
              ┌──────────────┐   ┌──────────────┐
              │  CloudFront  │   │ Redis        │
-             │  (HTTPS)     │   │ (Queue/Cache)│
+             │  (HTTPS)     │   │ (mood cache) │
              └──────────────┘   └──────────────┘
                     │                 │
-                    ▼                 ▼
-             ┌──────────────┐   ┌──────────────┐
-             │  EC2         │   │ Analytics    │
-             │  (Backend)   │   │ Worker       │
-             └──────────────┘   └──────────────┘
+                    └────────┬────────┘
+                             ▼
+                    ┌──────────────┐
+                    │  EC2         │
+                    │  (Backend)   │
+                    └──────────────┘
 ```
 
 ### Data Flow
@@ -105,7 +105,7 @@
 1. **Auth**: User registers/logs in → API Gateway (JWT, bcrypt) → PostgreSQL `users`
 2. **Photo Analyze**: Client uploads image → API Gateway (auth) → Mood Detection (ONNX emotion) → API Gateway (smoothing) → Recommendation Engine (Spotify + optional OpenAI) → response with tracks
 3. **Text Analyze**: Client sends text → API Gateway (auth) → Recommendation Engine (OpenAI text-to-emotion) → Spotify recommendations → response
-4. **Analytics**: Mood smoothing uses Redis (recent moods per user). A separate Analytics Worker exists that would consume a queue and write to `mood_history`; see [Implementation notes](#-implementation-notes--readme-vs-code) below.
+4. **Mood smoothing**: API Gateway uses Redis to store recent moods per user (for smoothing); no separate analytics worker in the deployed stack.
 
 ---
 
@@ -158,7 +158,7 @@
 
 ### 5. What is *not* wired end-to-end
 
-- **Mood history for analytics**: The **Analytics Worker** is built to consume a Redis queue and insert into `mood_history`. The **API Gateway never pushes jobs to that queue**; it only uses Redis for mood smoothing. So `mood_history` is not populated by the current flow.
+- **Mood history table**: The `mood_history` table exists in the schema but is not populated; API Gateway only uses Redis for mood smoothing (in-memory per request). No analytics worker is deployed.
 - **Spotify playlist creation**: We only **recommend** tracks (via Search or fallback). We do not create a playlist on the user's Spotify account (that would require user OAuth).
 - **Profile “past recommendations”**: Stored in DB by the Recommendation Engine, but the API does not expose “my past recommendations”; the profile screen uses **local storage** only.
 
@@ -175,7 +175,6 @@
 
 - **API Gateway**: Fastify 5, JWT (jsonwebtoken), bcrypt, pg, ioredis, Zod, @fastify/cors, @fastify/multipart
 - **Recommendation Engine**: Fastify 5, pg, OpenAI SDK, Axios (Spotify/YouTube)
-- **Analytics Worker**: ioredis, pg, background worker loop
 - **Runtime**: Node 20, TypeScript 5
 
 ### Mood Detection (Python)
@@ -186,7 +185,7 @@
 
 ### Data & Infra
 
-- **Database**: PostgreSQL 16 (users, recommendations, mood_history); migrations in `backend/migrations/`
+- **Database**: PostgreSQL 15 (users, recommendations, mood_history, user_uploads, spotify_tokens); migrations in `backend/migrations/` (001–005)
 - **Cache/Queue**: Redis 7
 - **Container**: Docker, Docker Compose (`backend/docker-compose.yml`, `backend/docker-compose.aws.yml`)
 - **Deploy**: AWS Amplify (web), EC2 + CloudFront (API), RDS (PostgreSQL)
@@ -195,20 +194,53 @@
 
 ### AWS Deployment (Summary)
 
-- **Backend**: EC2 + RDS (PostgreSQL) + Redis on EC2; `docker-compose.aws.yml`; CloudFront in front of EC2 (origin = EC2 public DNS, port 3002, HTTPS); RDS SSL handled in Node.
-- **Frontend**: Amplify, branch connected to repo, build from `web`; env `NEXT_PUBLIC_API_URL` = CloudFront URL (e.g. `https://d14rr2aqdwi0dp.cloudfront.net`).
-- **Env (backend)**:
-  - **API Gateway / Compose**: `backend/.env` (or export) with `DATABASE_URL`, `JWT_SECRET`.
-  - **Recommendation Engine**: `backend/services/recommendation-engine/.env` with `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI` (e.g. Amplify app URL `/auth/callback`). Optional: `OPENAI_API_KEY`, `YOUTUBE_API_KEY`.
-- **Spotify**: Create an app in [Spotify Developer Dashboard](https://developer.spotify.com/dashboard); add a Redirect URI (e.g. your Amplify URL). Backend uses **client credentials** and **Search API** (by genre), not the deprecated Recommendations API.
-- **Migrations**: Run `001_initial_schema.sql` through `004_user_uploads.sql` against RDS (e.g. via Docker: `postgres:15-alpine` or `postgres:16-alpine` with `psql` and connection URI including `?sslmode=require`).
-- **Updates**: Push code → EC2 `git pull`, rebuild images (`docker build --no-cache` per service), `docker-compose -f docker-compose.aws.yml up -d`
+Moodify is deployed on **EC2** (backend), **RDS** (PostgreSQL), **CloudFront** (HTTPS API), and **AWS Amplify** (web app). Redis runs in Docker on EC2. No local PostgreSQL required—migrations run via Docker against RDS.
+
+**High-level order:**
+
+1. **Spotify Developer Dashboard** – Create an app, get Client ID/Secret, add Redirect URI(s): production = `https://<your-cloudfront-domain>/auth/spotify/callback`, optional dev = `http://localhost:3000/auth/spotify/callback`.
+2. **RDS (PostgreSQL 15)** – Create instance (same region as EC2), Public access = Yes if you run migrations from your machine; security group allows 5432 from My IP (and later from EC2 security group). Initial database name: `moodify`. Build `DATABASE_URL` with `?sslmode=require`.
+3. **Redis** – Use Redis in Docker on EC2 (no ElastiCache); `docker-compose.aws.yml` includes the Redis service.
+4. **Migrations** – From project root, export `DATABASE_URL`, then run all migrations with a one-off Postgres container (see [Running migrations](#running-migrations) below).
+5. **EC2** – Amazon Linux or Ubuntu; install Docker + Docker Compose (standalone). Security group: SSH (22) from My IP, Custom TCP 3002 from 0.0.0.0/0. Add EC2 security group to RDS inbound (5432). Clone repo, create `backend/.env` with all production env vars, build images with `docker build` (per service), then `docker-compose -f docker-compose.aws.yml --env-file .env up -d --no-build`.
+6. **CloudFront** – Create distribution; origin = EC2 (public DNS or IP). Origin port 3002 if supported, or expose API on port 80 on EC2. Viewer protocol = Redirect HTTP to HTTPS; cache policy = CachingDisabled. Use the CloudFront URL as the public API base.
+7. **Amplify** – Connect repo, set Root = `web`. Env: `NEXT_PUBLIC_API_URL` = CloudFront URL, `NEXT_PUBLIC_YOUTUBE_API_KEY` if needed. Set backend `FRONTEND_SUCCESS_URL` to Amplify app URL and `SPOTIFY_REDIRECT_URI` to CloudFront callback URL; restart api-gateway.
+
+**Backend env (`backend/.env` on EC2):**
+
+- **API Gateway & Recommendation Engine (shared):** `DATABASE_URL`, `JWT_SECRET`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI` (backend callback, e.g. `https://<cloudfront>/auth/spotify/callback`), `FRONTEND_SUCCESS_URL` (Amplify URL). Optional: `OPENAI_API_KEY`, `YOUTUBE_API_KEY`, `CONFIDENCE_THRESHOLD`, `MOOD_SMOOTHING_WINDOW_SIZE`.
+
+`docker-compose.aws.yml` passes these into both api-gateway and recommendation-engine; no separate `.env` per service needed on EC2.
+
+**Running migrations (no local PostgreSQL):**
+
+```bash
+cd /path/to/Moodify
+export DATABASE_URL="postgresql://moodify:PASSWORD@RDS_ENDPOINT:5432/moodify?sslmode=require"
+docker run --rm -v "$(pwd)/backend/migrations:/migrations" -e DATABASE_URL postgres:15-alpine \
+  sh -c 'psql "$DATABASE_URL" -f /migrations/001_initial_schema.sql && \
+         psql "$DATABASE_URL" -f /migrations/002_add_username.sql && \
+         psql "$DATABASE_URL" -f /migrations/003_profile_picture.sql && \
+         psql "$DATABASE_URL" -f /migrations/004_user_uploads.sql && \
+         psql "$DATABASE_URL" -f /migrations/005_spotify_oauth.sql'
+```
+
+**EC2 build & run (if Docker Compose build fails due to Buildx version):**
+
+```bash
+cd ~/Moodify/backend
+docker build -t moodify-mood-detection:latest ./services/mood-detection
+docker build -t moodify-api-gateway:latest ./services/api-gateway
+docker build -t moodify-recommendation-engine:latest ./services/recommendation-engine
+docker-compose -f docker-compose.aws.yml --env-file .env up -d --no-build
+```
+
+**Updates:** Push code → EC2 `git pull`, rebuild only changed images (`docker build -t ... ./services/<name>`), then `docker-compose -f docker-compose.aws.yml --env-file .env up -d --no-build`.
 
 ---
 
 ## 🚧 Future Enhancements
 
-- [ ] Spotify OAuth login (use Spotify identity)
 - [ ] Android app (Kotlin/Compose) reusing same backend
 - [ ] Custom playlists per user stored in DB
 - [ ] More emotion labels and mood mappings
