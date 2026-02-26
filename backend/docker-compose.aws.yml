@@ -77,21 +77,5 @@ services:
       - NODE_TLS_REJECT_UNAUTHORIZED=0
     depends_on: []
 
-  analytics-worker:
-    image: moodify-analytics-worker:latest
-    build:
-      context: ./services/analytics-worker
-      dockerfile: Dockerfile
-    container_name: moodify-analytics-worker
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=redis://redis:6379
-      - REDIS_QUEUE_NAME=mood_history_queue
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
-    depends_on:
-      redis:
-        condition: service_healthy
-
 volumes:
   redis_data:
